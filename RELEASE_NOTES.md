@@ -1,10 +1,6 @@
-Rex Downloads 1.3.1
+Rex Downloads 1.3.2
 
-- Downloadpagina met uitklapbare categorieën en subcategorieën zoals een mappenstructuur.
-- Alle categorieën zichtbaar voor ingelogde gebruikers, ook lege categorieën.
-- Compacte bestandsregels met downloadlink, bestandstype en grootte.
-- Bestanden zonder categorie onder Overige bestanden.
-- Alleen bestanden waarvoor de gebruiker toegang heeft worden getoond.
-- Lichte vormgeving en responsive indeling voor mobiel.
-
-De shortcode [rex_downloads] blijft hetzelfde. Bestaande categorieën en bestanden worden automatisch gebruikt.
+- Optie Bestandsnaam overnemen als downloadnaam bij selectie uit de mediabibliotheek.
+- Bij nieuwe downloads standaard ingeschakeld; bij bewerken standaard uit om bestaande titels te behouden.
+- De volledige bestandsnaam inclusief extensie vult het veld Titel. De titel blijft handmatig aanpasbaar.
+- Aanvinken na bestandsselectie neemt de geselecteerde bestandsnaam direct over.

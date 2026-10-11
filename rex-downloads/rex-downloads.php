@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Rex Downloads
  * Description: Afgeschermde downloads met WordPress-login en bestaande gebruikersrollen. Shortcode: [rex_downloads].
- * Version: 1.3.1
+ * Version: 1.3.2
  * Plugin URI: https://github.com/spikerm/wp-downloads
  * Update URI: https://github.com/spikerm/wp-downloads
  * Author: Rex Markesteijn
@@ -17,7 +17,7 @@ final class Rex_Downloads {
         add_action('admin_post_rex_category',[$this,'save_category']);
         add_action('admin_post_rex_delete_category',[$this,'delete_category']);
         add_action('admin_enqueue_scripts',function(){
-            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); }
+            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'1.3.2',true); }
         });
         add_action('admin_post_rex_create_role',[$this,'create_role']);
         add_action('show_user_profile',[$this,'user_roles']);
@@ -304,9 +304,10 @@ final class Rex_Downloads {
         if (is_wp_error($storage)) { echo '<div class="notice notice-error"><p>'.esc_html($storage->get_error_message()).'</p></div>'; }
         echo '<h2>'.($edit ? 'Download bewerken' : 'Nieuwe download').'</h2><form method="post" enctype="multipart/form-data" action="'.esc_url(admin_url('admin-post.php')).'">';
         wp_nonce_field('rex_manage');
-        echo '<input type="hidden" name="action" value="rex_save"><input type="hidden" name="id" value="'.$edit.'"><table class="form-table"><tr><th>Titel</th><td><input class="regular-text" name="title" required value="'.esc_attr($post ? $post->post_title : '').'"></td></tr><tr><th>Beschrijving</th><td><textarea class="large-text" rows="3" name="description">'.esc_textarea($post ? $post->post_content : '').'</textarea></td></tr><tr><th>Bestand</th><td>';
+        echo '<input type="hidden" name="action" value="rex_save"><input type="hidden" name="id" value="'.$edit.'"><table class="form-table"><tr><th>Titel</th><td><input class="regular-text" name="title" id="rex-download-title" required value="'.esc_attr($post ? $post->post_title : '').'"></td></tr><tr><th>Beschrijving</th><td><textarea class="large-text" rows="3" name="description">'.esc_textarea($post ? $post->post_content : '').'</textarea></td></tr><tr><th>Bestand</th><td>';
         echo '<input type="hidden" name="media_id" id="rex-media-id" value="0"><p><button type="button" class="button" id="rex-media-select">Kies uit mediabibliotheek</button> <span id="rex-media-name"></span> <button type="button" class="button" id="rex-media-clear">Selectie wissen</button></p><p class="description">Selecteer een bestaand mediabestand. Bij bewerken alleen kiezen om het bestand te vervangen. De beveiligde kopie staat apart; het oorspronkelijke mediabestand behoudt zijn openbare URL.</p>';
-        echo '<script>jQuery(function($){var frame;$("#rex-media-select").on("click",function(){if(!frame){frame=wp.media({title:"Kies een downloadbestand",button:{text:"Dit bestand gebruiken"},multiple:false});frame.on("select",function(){var a=frame.state().get("selection").first().toJSON();$("#rex-media-id").val(a.id);$("#rex-media-name").text(a.filename||a.title);});}frame.open();});$("#rex-media-clear").on("click",function(){$("#rex-media-id").val(0);$("#rex-media-name").text("");});});</script>';
+        echo '<p><label><input type="checkbox" id="rex-use-filename" '.checked(!$edit,true,false).'> Bestandsnaam overnemen als downloadnaam</label></p><p class="description">Bij het selecteren wordt de volledige bestandsnaam inclusief extensie ingevuld bij Titel. Je kunt de titel daarna zelf aanpassen. Vink uit om je bestaande titel te behouden.</p>';
+
         echo '</td></tr><tr><th>Categorieën</th><td>';
         $assigned = $edit ? wp_get_object_terms($edit,'rex_download_category',['fields'=>'ids']) : [];
         if (is_wp_error($assigned)) { $assigned = []; }
@@ -349,4 +350,4 @@ require_once __DIR__.'/frontend.php';
 new Rex_Downloads();
 
 require_once __DIR__.'/github-updater.php';
-new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.1');
+new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.2');

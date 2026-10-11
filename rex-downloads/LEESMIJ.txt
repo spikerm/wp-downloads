@@ -1,4 +1,4 @@
-REX DOWNLOADS 1.3.1
+REX DOWNLOADS 1.3.2
 Installatie: WordPress > Plugins > Nieuwe plugin > Plugin uploaden > kies ZIP > activeren.
 Maak een pagina Downloads en plaats de shortcode [rex_downloads] in een Shortcode-blok.
 Beheer bestanden via WordPress > Downloads. Alleen gebruikers met manage_options kunnen beheren.
@@ -71,3 +71,6 @@ Categorieën kunnen ook worden bewerkt en verwijderd. Bij verwijderen blijven do
 1.3.1: Downloadpagina toont alle categorieën/subcategorieën in uitklapbare mappen.
 Alleen toegestane bestanden zichtbaar; lege categorieën blijven zichtbaar.
 Bestanden zonder categorie onder Overige bestanden. Shortcode blijft [rex_downloads].
+
+1.3.2: Bestandsnaam overnemen als downloadnaam bij mediaselectie.
+Nieuwe downloads: standaard aan. Bewerken: standaard uit. Titel blijft aanpasbaar.
