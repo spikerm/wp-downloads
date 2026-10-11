@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Rex Downloads
+ * Plugin Name: WP Dares Downloads
  * Description: Afgeschermde downloads met WordPress-login en bestaande gebruikersrollen. Shortcode: [rex_downloads].
- * Version: 1.3.2
+ * Version: 1.3.3
  * Plugin URI: https://github.com/spikerm/wp-downloads
  * Update URI: https://github.com/spikerm/wp-downloads
  * Author: Rex Markesteijn
@@ -17,7 +17,7 @@ final class Rex_Downloads {
         add_action('admin_post_rex_category',[$this,'save_category']);
         add_action('admin_post_rex_delete_category',[$this,'delete_category']);
         add_action('admin_enqueue_scripts',function(){
-            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'1.3.2',true); }
+            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'1.3.3',true); }
         });
         add_action('admin_post_rex_create_role',[$this,'create_role']);
         add_action('show_user_profile',[$this,'user_roles']);
@@ -154,17 +154,17 @@ final class Rex_Downloads {
         foreach (wp_roles()->get_names() as $key=>$label) {
             echo '<tr><td>'.esc_html(translate_user_role($label)).'</td><td><code>'.esc_html($key).'</code></td><td>'.(isset($custom[$key]) ? 'Eigen downloadrol' : 'Bestaande WordPress-rol').'</td></tr>';
         }
-        echo '</tbody></table><p>Ga naar <a href="'.esc_url(admin_url('users.php')).'">Gebruikers</a>, bewerk een gebruiker en vink bij <strong>Rex Downloads: extra rollen</strong> de gewenste groepen aan. Selecteer vervolgens deze rollen bij je downloads. Eén overeenkomende rol is voldoende voor toegang.</p></div>';
+        echo '</tbody></table><p>Ga naar <a href="'.esc_url(admin_url('users.php')).'">Gebruikers</a>, bewerk een gebruiker en vink bij <strong>WP Dares Downloads: extra rollen</strong> de gewenste groepen aan. Selecteer vervolgens deze rollen bij je downloads. Eén overeenkomende rol is voldoende voor toegang.</p></div>';
     }
     public function user_roles($user) {
         if (!current_user_can('manage_options') || !current_user_can('promote_users') || !current_user_can('edit_user', $user->ID)) { return; }
-        echo '<h2>Rex Downloads: extra rollen</h2><table class="form-table"><tr><th>Downloadgroepen</th><td>';
+        echo '<h2>WP Dares Downloads: extra rollen</h2><table class="form-table"><tr><th>Downloadgroepen</th><td>';
         wp_nonce_field('rex_user_roles_'.$user->ID, 'rex_roles_nonce');
         echo '<input type="hidden" name="rex_roles_present" value="1">';
         foreach ($this->custom_roles() as $key=>$label) {
             echo '<label style="display:block;margin:8px 0"><input type="checkbox" name="rex_user_roles[]" value="'.esc_attr($key).'" '.checked(in_array($key,(array)$user->roles,true),true,false).'> '.esc_html($label).'</label>';
         }
-        echo '<p class="description">Meerdere keuzes zijn mogelijk. Deze selectie beheert alleen de downloadrollen die via Rex Downloads zijn aangemaakt. Andere rollen blijven behouden. Maak rollen aan via Downloads → Rollen.</p></td></tr></table>';
+        echo '<p class="description">Meerdere keuzes zijn mogelijk. Deze selectie beheert alleen de downloadrollen die via WP Dares Downloads zijn aangemaakt. Andere rollen blijven behouden. Maak rollen aan via Downloads → Rollen.</p></td></tr></table>';
     }
     public function save_user_roles($user_id) {
         if (!is_admin() || !isset($_POST['rex_roles_present']) || !current_user_can('manage_options') || !current_user_can('promote_users') || !current_user_can('edit_user', $user_id)) { return; }
@@ -350,4 +350,4 @@ require_once __DIR__.'/frontend.php';
 new Rex_Downloads();
 
 require_once __DIR__.'/github-updater.php';
-new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.2');
+new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.3');

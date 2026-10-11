@@ -50,7 +50,7 @@ final class Rex_Downloads_GitHub_Updater {
         if ($action !== 'plugin_information' || ($args->slug ?? '') !== 'rex-downloads') { return $result; }
         $release = $this->release();
         if (!$release) { return $result; }
-        return (object)['name'=>'Rex Downloads','slug'=>'rex-downloads','version'=>$release['version'],'author'=>'Rex Markesteijn','homepage'=>self::URI,'requires'=>'6.0','requires_php'=>'7.4','download_link'=>$release['package'],'last_updated'=>$release['published'],'sections'=>['description'=>'Afgeschermde downloads met rollen, categorieën, subcategorieën en mediabibliotheek.','changelog'=>nl2br(esc_html($release['notes']))]];
+        return (object)['name'=>'WP Dares Downloads','slug'=>'rex-downloads','version'=>$release['version'],'author'=>'Rex Markesteijn','homepage'=>self::URI,'requires'=>'6.0','requires_php'=>'7.4','download_link'=>$release['package'],'last_updated'=>$release['published'],'sections'=>['description'=>'Afgeschermde downloads met rollen, categorieën, subcategorieën en mediabibliotheek.','changelog'=>nl2br(esc_html($release['notes']))]];
     }
     public function check() {
         if (!current_user_can('update_plugins')) { wp_die('Geen toegang.','',['response'=>403]); }
@@ -63,7 +63,7 @@ final class Rex_Downloads_GitHub_Updater {
     public function admin() {
         if (!current_user_can('update_plugins')) { return; }
         $release = $this->release();
-        echo '<div class="wrap"><h1>Rex Downloads — Updates</h1><p>Geïnstalleerde versie: <strong>'.esc_html($this->version).'</strong></p>';
+        echo '<div class="wrap"><h1>WP Dares Downloads — Updates</h1><p>Geïnstalleerde versie: <strong>'.esc_html($this->version).'</strong></p>';
         if (!$release) { echo '<div class="notice notice-warning inline"><p>GitHub-release niet beschikbaar. Controleer je internetverbinding of probeer later opnieuw.</p></div>'; }
         else {
             echo '<p>Nieuwste release: <strong>'.esc_html($release['version']).'</strong></p>';

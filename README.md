@@ -1,4 +1,4 @@
-# Rex Downloads
+# WP Dares Downloads
 
 WordPress-plugin voor downloads met meerdere gebruikersrollen, categorieën en subcategorieën, mediabibliotheekselectie en GitHub-updates.
 

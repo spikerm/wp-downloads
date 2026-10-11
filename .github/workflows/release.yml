@@ -33,5 +33,5 @@ jobs:
           if gh release view "v$VERSION" >/dev/null 2>&1; then
             echo "Release v$VERSION already exists; leaving it unchanged."
           else
-            gh release create "v$VERSION" rex-downloads.zip --target "$GITHUB_SHA" --title "Rex Downloads $VERSION" --notes-file RELEASE_NOTES.md --latest
+            gh release create "v$VERSION" rex-downloads.zip --target "$GITHUB_SHA" --title "WP Dares Downloads $VERSION" --notes-file RELEASE_NOTES.md --latest
           fi

@@ -1,6 +1,5 @@
-Rex Downloads 1.3.2
+WP Dares Downloads 1.3.3
 
-- Optie Bestandsnaam overnemen als downloadnaam bij selectie uit de mediabibliotheek.
-- Bij nieuwe downloads standaard ingeschakeld; bij bewerken standaard uit om bestaande titels te behouden.
-- De volledige bestandsnaam inclusief extensie vult het veld Titel. De titel blijft handmatig aanpasbaar.
-- Aanvinken na bestandsselectie neemt de geselecteerde bestandsnaam direct over.
+- Pluginnaam gewijzigd naar WP Dares Downloads.
+- Naam bijgewerkt in het pluginbeheer, gebruikersprofielen en updatepagina.
+- Bestaande pluginmap, shortcode, downloads, categorieën en instellingen blijven behouden.

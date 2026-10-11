@@ -1,4 +1,4 @@
-REX DOWNLOADS 1.3.2
+WP DARES DOWNLOADS 1.3.3
 Installatie: WordPress > Plugins > Nieuwe plugin > Plugin uploaden > kies ZIP > activeren.
 Maak een pagina Downloads en plaats de shortcode [rex_downloads] in een Shortcode-blok.
 Beheer bestanden via WordPress > Downloads. Alleen gebruikers met manage_options kunnen beheren.
@@ -31,9 +31,9 @@ Controle na installeren:
 Deze versie is nog niet getest op jouw WordPress/Plesk-installatie.
 
 NIEUW IN 1.1.0 — MEERDERE DOWNLOADROLLEN
-1. Upload deze ZIP als update van Rex Downloads en kies vervangen.
+1. Upload deze ZIP als update van WP Dares Downloads en kies vervangen.
 2. Ga naar Downloads > Rollen en maak bijvoorbeeld Leden en Technici aan.
-3. Ga naar Gebruikers > gebruiker bewerken > Rex Downloads: extra rollen.
+3. Ga naar Gebruikers > gebruiker bewerken > WP Dares Downloads: extra rollen.
 4. Vink één of meerdere downloadgroepen aan en sla de gebruiker op.
 5. Selecteer bij elke download de toegestane rollen. Eén match geeft toegang.
 Eigen rollen geven alleen read, geen upload-, publicatie- of beheerrechten.
