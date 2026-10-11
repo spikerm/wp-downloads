@@ -32,3 +32,5 @@ Lokaal controleren: `php tests/updater.php` en `python3 scripts/build.py`.
 Vereist: WordPress 6.0+, PHP 7.4+. WordPress-server moet GitHub API en release-downloads kunnen bereiken.
 
 Categorieën kunnen ook worden bewerkt en verwijderd. Bij verwijderen blijven downloads bestaan en worden subcategorieën één niveau hoger geplaatst. Categorieën kunnen niet onder zichzelf of eigen subcategorieën worden geplaatst.
+
+Vanaf 1.3.1 toont [rex_downloads] alle categorieën en subcategorieën als uitklapbare mappen, met compacte bestandsregels. Alleen bestanden waarvoor de gebruiker toegang heeft zijn zichtbaar.

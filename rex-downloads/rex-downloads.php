@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Rex Downloads
  * Description: Afgeschermde downloads met WordPress-login en bestaande gebruikersrollen. Shortcode: [rex_downloads].
- * Version: 1.3.0
+ * Version: 1.3.1
  * Plugin URI: https://github.com/spikerm/wp-downloads
  * Update URI: https://github.com/spikerm/wp-downloads
  * Author: Rex Markesteijn
@@ -333,28 +333,20 @@ final class Rex_Downloads {
     }
     public function shortcode() {
         ob_start();
-        echo '<section class="rex-downloads"><style>.rex-downloads{background:#111827;color:#e5e7eb;border-radius:18px;padding:28px;font:16px/1.6 system-ui}.rex-downloads a{color:#7dd3fc}.rex-downloads input{color:#111827;background:#fff;padding:10px;border-radius:8px;max-width:100%;box-sizing:border-box}.rex-downloads .rex-card{background:#1f2937;padding:20px;border:1px solid #374151;border-radius:12px;margin:16px 0}.rex-downloads h2,.rex-downloads h3{color:#fff;margin:0 0 12px}.rex-downloads .rex-button{display:inline-block;background:#0284c7;color:white;padding:10px 18px;border-radius:8px;text-decoration:none}.rex-downloads small{color:#cbd5e1}</style><h2>Downloads</h2>';
+        echo '<section class="rex-downloads">'.Rex_Downloads_Frontend::styles().'<h2>Downloads</h2>';
         if (!is_user_logged_in()) {
             echo '<p>Log in met je WordPress-account om je bestanden te bekijken.</p>';
             wp_login_form(['redirect'=>get_permalink(),'label_username'=>'Gebruikersnaam of e-mailadres','label_password'=>'Wachtwoord','label_remember'=>'Ingelogd blijven','label_log_in'=>'Inloggen','id_username'=>'rex-user','id_password'=>'rex-pass','id_remember'=>'rex-remember','id_submit'=>'rex-submit']);
             echo '<a href="'.esc_url(wp_lostpassword_url(get_permalink())).'">Wachtwoord vergeten?</a>';
         } else {
-            echo '<p>Ingelogd als '.esc_html(wp_get_current_user()->display_name).' · <a href="'.esc_url(wp_logout_url(get_permalink())).'">Uitloggen</a></p>';
-            $count = 0;
-            foreach (get_posts(['post_type'=>'rex_download','numberposts'=>-1,'orderby'=>'title','order'=>'ASC']) as $item) {
-                if (!$this->allowed($item->ID)) { continue; }
-                $count++;
-                $category_names = wp_get_object_terms($item->ID,'rex_download_category',['fields'=>'names']);
-                if (is_wp_error($category_names)) { $category_names = []; }
-                $url = wp_nonce_url(add_query_arg(['action'=>'rex_download','id'=>$item->ID],admin_url('admin-post.php')),'rex_download_'.$item->ID);
-                echo '<article class="rex-card"><h3>'.esc_html($item->post_title).'</h3>'.($category_names ? '<small>'.esc_html(implode(' · ',$category_names)).'</small>' : '').'<p>'.nl2br(esc_html($item->post_content)).'</p><p><small>'.esc_html(get_post_meta($item->ID,'_rex_name',true)).' · '.esc_html(size_format((int)get_post_meta($item->ID,'_rex_size',true))).'</small></p><a class="rex-button" href="'.esc_url($url).'">Download bestand</a></article>';
-            }
-            if (!$count) { echo '<p>Er zijn nog geen downloads beschikbaar voor jouw account.</p>'; }
+            echo '<p class="rex-account">Ingelogd als '.esc_html(wp_get_current_user()->display_name).' · <a href="'.esc_url(wp_logout_url(get_permalink())).'">Uitloggen</a></p>';
+            Rex_Downloads_Frontend::files($this->category_tree(), get_posts(['post_type'=>'rex_download','post_status'=>'publish','numberposts'=>-1,'orderby'=>'title','order'=>'ASC']), function($id){ return $this->allowed($id); });
         }
         echo '</section>'; return ob_get_clean();
     }
 }
+require_once __DIR__.'/frontend.php';
 new Rex_Downloads();
 
 require_once __DIR__.'/github-updater.php';
-new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.0');
+new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.1');
