@@ -1,0 +1,36 @@
+name: Validate and publish WordPress plugin
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rex-downloads-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PHP and updater behavior
+        run: |
+          find rex-downloads tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php tests/updater.php
+          php tests/categories.php
+      - name: Build installable archive
+        id: build
+        run: |
+          version="$(python3 scripts/build.py)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          unzip -t rex-downloads.zip
+      - name: Publish version once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists; leaving it unchanged."
+          else
+            gh release create "v$VERSION" rex-downloads.zip --target "$GITHUB_SHA" --title "Rex Downloads $VERSION" --notes-file RELEASE_NOTES.md --latest
+          fi

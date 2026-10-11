@@ -1,0 +1,69 @@
+REX DOWNLOADS 1.3.0
+Installatie: WordPress > Plugins > Nieuwe plugin > Plugin uploaden > kies ZIP > activeren.
+Maak een pagina Downloads en plaats de shortcode [rex_downloads] in een Shortcode-blok.
+Beheer bestanden via WordPress > Downloads. Alleen gebruikers met manage_options kunnen beheren.
+Per bestand selecteer je bestaande WordPress-rollen, ook rollen van andere plugins.
+Alle ingelogde gebruikers = ieder ingelogd WordPress-account. Geen rollen = alleen beheerders.
+Rollen zijn expliciet: redacteur krijgt niet automatisch bestanden voor abonnee; vink beide aan.
+Toegang wordt bij iedere download opnieuw gecontroleerd. Niet-toegankelijke bestanden zijn verborgen.
+Geen aparte gebruikersdatabase of registratie; gebruik WordPress > Gebruikers.
+Bestanden worden buiten DOCUMENT_ROOT opgeslagen, niet in de mediabibliotheek.
+Als de standaardmap niet schrijfbaar is: maak een privémap buiten ALLE webroots en stel vóór de stopregel in wp-config.php in:
+define('REX_DOWNLOADS_DIR', '/var/www/vhosts/jouwdomein.nl/private/rex-downloads');
+Pas dit pad aan aan je server. Op Plesk is private meestal buiten httpdocs; controleer andere domeinroots/aliases.
+PHP moet toegang hebben tot deze map; stel zo nodig Plesk open_basedir correct in.
+Zet de map NOOIT via nginx/Apache/alias/static hosting publiek beschikbaar.
+Maprechten 0700 en bestanden 0600; de PHP-gebruiker moet eigenaar zijn.
+Maak back-ups van WordPress-database EN privémap. Verplaats de map niet zonder bestanden mee te nemen.
+Deactiveren/verwijderen van de plugin bewaart bestanden en gegevens. Verwijderen via Downloads wist het bestand definitief.
+Vervangen van een bestand verwijdert de oude versie.
+Downloads-pagina en wp-admin/admin-post.php uitsluiten van alle pagina/CDN-caches; plugin zet ook no-cache headers.
+Uploadlimiet volgt WordPress/PHP. Toegestaan: PDF, ZIP, TXT, CSV, Office-documenten, JPG/PNG/WebP, MP3/MP4, STL, BIN en HEX.
+Uitvoerbare bestanden verpakken in ZIP. Alle downloads worden als attachment met nosniff verstuurd.
+Geen virusscanner inbegrepen. Alleen beheerders uploaden; controleer bestanden zelf.
+Vereist: WordPress 6.0+, PHP 7.4+. Geen externe diensten of extra plugins nodig.
+Controle na installeren:
+1. Upload een bestand voor abonnee en een ander bestand alleen voor redacteur.
+2. Test uitgelogd: loginformulier, directe download vraagt login.
+3. Test met abonnee: alleen abonnee-bestand zichtbaar; gekopieerde link naar redacteur-bestand geeft 403.
+4. Test met redacteur en beheerder, wachtwoordherstel, downloaden, vervangen en verwijderen.
+5. Controleer dat je downloadpagina nooit gecachet wordt en privémap nergens publiek bereikbaar is.
+Deze versie is nog niet getest op jouw WordPress/Plesk-installatie.
+
+NIEUW IN 1.1.0 — MEERDERE DOWNLOADROLLEN
+1. Upload deze ZIP als update van Rex Downloads en kies vervangen.
+2. Ga naar Downloads > Rollen en maak bijvoorbeeld Leden en Technici aan.
+3. Ga naar Gebruikers > gebruiker bewerken > Rex Downloads: extra rollen.
+4. Vink één of meerdere downloadgroepen aan en sla de gebruiker op.
+5. Selecteer bij elke download de toegestane rollen. Eén match geeft toegang.
+Eigen rollen geven alleen read, geen upload-, publicatie- of beheerrechten.
+Bestaande rollen van WordPress en andere plugins zijn ook selecteerbaar per download.
+Extra rollen selecteren beheert alleen de eigen downloadrollen; de normale WordPress-rolkeuze blijft bestaan.
+Verander de normale rolkeuze niet wanneer je alleen extra downloadgroepen wilt aanpassen.
+Controleer na de update met een testgebruiker in twee groepen dat beide groepen zichtbaar zijn.
+Verwijder een groep bij de gebruiker en controleer dat de bijbehorende download niet meer beschikbaar is.
+Bestaande downloads, bestanden en toegangsinstellingen blijven behouden bij bijwerken.
+
+1.1.1: Hoofdmenu vóór submenu geregistreerd zodat Downloads > Rollen de juiste beheerpagina opent. Expliciet submenu Bestanden toegevoegd.
+
+1.2.0: Mijn Downloads (eigen uploads), Alle Downloads, Nieuw bestand, Categorieën en Rollen.
+Categorieën toevoegen via Downloads > Categorieën en selecteren per bestand.
+Kies uit mediabibliotheek importeert een lokale kopie naar de privémap.
+LET OP: het origineel in de mediabibliotheek blijft via zijn bestaande URL bereikbaar.
+Gebruik de mediabibliotheek niet voor bestanden waarvan het origineel vertrouwelijk moet blijven.
+Een gekozen mediabestand vervangen/verwijderen verandert het origineel niet.
+Cloud/offloaded mediabestanden zonder lokaal bestand worden niet ondersteund.
+
+1.2.1: Rechtstreekse uploadknop verwijderd; bestanden kiezen via mediabibliotheek.
+
+1.2.2: Subcategorieën maken via Downloads > Categorieën > Hoofdcategorie.
+Kies Geen voor een hoofdcategorie, of een bestaande categorie voor een subcategorie.
+Meerdere niveaus mogelijk. Boomstructuur zichtbaar in overzicht en bestandformulier.
+Categorieën organiseren bestanden; rollen bepalen nog steeds de toegang.
+
+1.3.0: Updates via publieke GitHub-releases van spikerm/wp-downloads.
+Eenmalig deze versie installeren. Daarna bijwerken via Plugins of Dashboard > Updates.
+Downloads > Updates toont de versie en bevat Nu controleren.
+Auto-updates optioneel inschakelen in de WordPress-pluginlijst.
+
+Categorieën kunnen ook worden bewerkt en verwijderd. Bij verwijderen blijven downloads bestaan en worden subcategorieën één niveau hoger geplaatst. Categorieën kunnen niet onder zichzelf of eigen subcategorieën worden geplaatst.
