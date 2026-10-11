@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Dares Downloads
  * Description: Afgeschermde downloads met WordPress-login en bestaande gebruikersrollen. Shortcode: [rex_downloads].
- * Version: 1.3.3
+ * Version: 1.3.4
  * Plugin URI: https://github.com/spikerm/wp-downloads
  * Update URI: https://github.com/spikerm/wp-downloads
  * Author: Rex Markesteijn
@@ -15,9 +15,10 @@ final class Rex_Downloads {
     public function __construct() {
         add_action('init', [$this,'register']);
         add_action('admin_post_rex_category',[$this,'save_category']);
+        add_action('admin_post_rex_order_category',[$this,'order_category']);
         add_action('admin_post_rex_delete_category',[$this,'delete_category']);
         add_action('admin_enqueue_scripts',function(){
-            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'1.3.3',true); }
+            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'1.3.4',true); }
         });
         add_action('admin_post_rex_create_role',[$this,'create_role']);
         add_action('show_user_profile',[$this,'user_roles']);
@@ -52,6 +53,7 @@ final class Rex_Downloads {
     private function category_tree() {
         $terms = get_terms(['taxonomy'=>'rex_download_category','hide_empty'=>false,'orderby'=>'name','order'=>'ASC']);
         if (is_wp_error($terms)) { return []; }
+        $terms = $this->ordered_categories($terms);
         $children = []; $rows = []; $seen = [];
         foreach ($terms as $term) { $children[(int)$term->parent][] = $term; }
         $walk = function($parent,$depth) use (&$walk,&$children,&$rows,&$seen) {
@@ -72,6 +74,37 @@ final class Rex_Downloads {
         }
         return $rows;
     }
+    private function ordered_categories($terms) {
+        $order = get_option('rex_download_category_order',[]);
+        if (!is_array($order)) { $order = []; }
+        usort($terms,function($a,$b) use ($order) {
+            $comparison = ($order[$a->term_id] ?? PHP_INT_MAX) <=> ($order[$b->term_id] ?? PHP_INT_MAX);
+            return $comparison ?: (strnatcasecmp($a->name,$b->name) ?: ($a->term_id <=> $b->term_id));
+        });
+        return $terms;
+    }
+    public function order_category() {
+        $this->guard();
+        $id = absint($_POST['category_id'] ?? 0);
+        $direction = sanitize_key(wp_unslash($_POST['direction'] ?? ''));
+        $term = $id ? get_term($id,'rex_download_category') : null;
+        if (!$term || is_wp_error($term) || !in_array($direction,['up','down'],true)) { wp_die('Ongeldige categorie of richting.'); }
+        $siblings = get_terms(['taxonomy'=>'rex_download_category','hide_empty'=>false,'parent'=>(int)$term->parent]);
+        if (is_wp_error($siblings)) { wp_die('Categorieën konden niet worden opgehaald.'); }
+        $siblings = $this->ordered_categories($siblings);
+        $ids = array_map(function($item){ return (int)$item->term_id; },$siblings);
+        $index = array_search($id,$ids,true);
+        if ($index === false) { wp_die('Categorie niet gevonden.'); }
+        $target = $index + ($direction === 'up' ? -1 : 1);
+        if (isset($ids[$target])) {
+            $ids[$index] = $ids[$target]; $ids[$target] = $id;
+            $order = get_option('rex_download_category_order',[]);
+            if (!is_array($order)) { $order = []; }
+            foreach ($ids as $position=>$term_id) { $order[$term_id] = $position; }
+            update_option('rex_download_category_order',$order,false);
+        }
+        wp_safe_redirect(admin_url('admin.php?page=rex-download-categories')); exit;
+    }
     public function categories_admin() {
         if (!current_user_can('manage_options')) { return; }
         $edit_id = absint($_GET['edit_category'] ?? 0);
@@ -81,18 +114,34 @@ final class Rex_Downloads {
         wp_nonce_field('rex_manage');
         echo '<input type="hidden" name="action" value="rex_category"><input type="hidden" name="category_id" value="'.(int)$edit_id.'"><label for="rex-cat-name">Naam</label> <input id="rex-cat-name" name="category_name" value="'.esc_attr($edit ? $edit->name : '').'" required class="regular-text">';
         echo '<p><label for="rex-category-parent">Hoofdcategorie</label> ';
-        wp_dropdown_categories(['taxonomy'=>'rex_download_category','hide_empty'=>false,'hierarchical'=>true,'orderby'=>'name','name'=>'category_parent','id'=>'rex-category-parent','show_option_none'=>'Geen — maak een hoofdcategorie','option_none_value'=>0,'selected'=>$edit ? (int)$edit->parent : 0,'exclude_tree'=>$edit_id]);
+        echo '<select name="category_parent" id="rex-category-parent"><option value="0">Geen — maak een hoofdcategorie</option>';
+        $excluded = $edit_id ? get_term_children($edit_id,'rex_download_category') : [];
+        if (is_wp_error($excluded)) { $excluded = []; }
+        $excluded[] = $edit_id;
+        foreach ($this->category_tree() as $row) {
+            $term = $row['term'];
+            if (in_array($term->term_id,$excluded)) { continue; }
+            echo '<option value="'.(int)$term->term_id.'" '.selected($edit ? (int)$edit->parent : 0,(int)$term->term_id,false).'>'.esc_html(str_repeat('— ',$row['depth']).$term->name).'</option>';
+        }
+        echo '</select>';
+
         echo '</p><p class="description">Kies een bestaande categorie om een subcategorie te maken. Ook meerdere niveaus zijn mogelijk.</p>';
         submit_button($edit ? 'Categorie opslaan' : 'Categorie toevoegen');
         if ($edit) { echo '<p><a href="'.esc_url(admin_url('admin.php?page=rex-download-categories')).'">Bewerken annuleren</a></p>'; }
-        echo '</form><table class="widefat striped"><thead><tr><th>Categorie</th><th>Aantal bestanden</th><th>Acties</th></tr></thead><tbody>';
+        echo '</form><table class="widefat striped"><thead><tr><th>Categorie</th><th>Aantal bestanden</th><th>Volgorde</th><th>Acties</th></tr></thead><tbody>';
         foreach ($this->category_tree() as $row) {
             $term = $row['term'];
-            echo '<tr><td><span style="display:inline-block;padding-left:'.(int)($row['depth']*22).'px">'.($row['depth'] ? '↳ ' : '').esc_html($term->name).'</span></td><td>'.(int)$term->count.'</td><td><a href="'.esc_url(admin_url('admin.php?page=rex-download-categories&edit_category='.$term->term_id)).'">Bewerken</a><form style="display:inline;margin-left:15px" method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return confirm(\'Categorie verwijderen? Downloads blijven bestaan. Subcategorieën schuiven een niveau omhoog.\')">';
+            echo '<tr><td><span style="display:inline-block;padding-left:'.(int)($row['depth']*22).'px">'.($row['depth'] ? '↳ ' : '').esc_html($term->name).'</span></td><td>'.(int)$term->count.'</td><td>';
+            foreach (['up'=>'↑ Omhoog','down'=>'↓ Omlaag'] as $direction=>$label) {
+                echo '<form style="display:inline-block;margin:2px" method="post" action="'.esc_url(admin_url('admin-post.php')).'">';
+                wp_nonce_field('rex_manage');
+                echo '<input type="hidden" name="action" value="rex_order_category"><input type="hidden" name="category_id" value="'.(int)$term->term_id.'"><input type="hidden" name="direction" value="'.esc_attr($direction).'"><button class="button" aria-label="'.esc_attr($term->name.' '.$label).'">'.esc_html($label).'</button></form>';
+            }
+            echo '</td><td><a href="'.esc_url(admin_url('admin.php?page=rex-download-categories&edit_category='.$term->term_id)).'">Bewerken</a><form style="display:inline;margin-left:15px" method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return confirm(\'Categorie verwijderen? Downloads blijven bestaan. Subcategorieën schuiven een niveau omhoog.\')">';
             wp_nonce_field('rex_manage');
             echo '<input type="hidden" name="action" value="rex_delete_category"><input type="hidden" name="category_id" value="'.(int)$term->term_id.'"><button class="button-link-delete">Verwijderen</button></form></td></tr>';
         }
-        echo '</tbody></table><p>Selecteer categorieën bij het toevoegen of bewerken van een download.</p></div>';
+        echo '</tbody></table><p>Gebruik Omhoog en Omlaag om categorieën binnen dezelfde hoofdcategorie te verplaatsen. Subcategorieën verplaatsen mee met hun bovenliggende map. De volgorde geldt ook op de downloadpagina.</p></div>';
     }
     public function save_category() {
         $this->guard();
@@ -350,4 +399,4 @@ require_once __DIR__.'/frontend.php';
 new Rex_Downloads();
 
 require_once __DIR__.'/github-updater.php';
-new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.3');
+new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.4');

@@ -1,5 +1,6 @@
-WP Dares Downloads 1.3.3
+WP Dares Downloads 1.3.4
 
-- Pluginnaam gewijzigd naar WP Dares Downloads.
-- Naam bijgewerkt in het pluginbeheer, gebruikersprofielen en updatepagina.
-- Bestaande pluginmap, shortcode, downloads, categorieën en instellingen blijven behouden.
+- Categorieën en subcategorieën ordenen met Omhoog en Omlaag in Downloads → Categorieën.
+- Verplaatsen gebeurt binnen dezelfde hoofdcategorie; de volledige substructuur gaat mee.
+- Dezelfde volgorde op de downloadpagina, bij categoriekeuze en in de hoofdcategorielijst.
+- Volgorde blijft opgeslagen. Nieuwe categorieën verschijnen na reeds geordende categorieën.
