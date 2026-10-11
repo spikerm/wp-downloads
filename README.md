@@ -61,3 +61,15 @@ PHP ZIP is vereist. Limieten: maximaal 500 bestanden, 512 MB uitgepakt, manifest
 
 ### Validatie
 CI controleert PHP en JavaScript, updater, categoriehiërarchie en volgorde, toegangsbeleid, exportmanifesten, zoekfilters, favorieten, bulkselectie en slepen. HTTP-tests gebruiken een lokale WordPress-API-fixture voor daadwerkelijke PHP uploads, streaming, PDF/nonce-controle en een export/import-rondgang. Dit vervangt geen compatibiliteitstest op je eigen WordPress-installatie met andere plugins.
+
+## Nieuw in 3.0.0
+- **Dashboard**: populariteit binnen de logbewaartermijn, recente wijzigingen en open aanvragen.
+- **Bestanden beheren**: slepen of omhoog/omlaag, volgorde per categorie en bulkacties op maximaal 500 geselecteerde bestanden.
+- **Prullenbak**: herstellen of definitief wissen inclusief alle bestandsversies. Geen automatische vervaldatum.
+- **Bestand bewerken**: oude kopieën terugzetten/downloaden, begin- en einddatum plannen en e-mailmeldingen aanzetten.
+- **Toegangsaanvragen**: gebruikers vragen toegang tot een categorie. Goedkeuring geldt voor de huidige bestanden in die categorie en subcategorieën; rollen en publicatiegrenzen blijven gelden.
+- **Volgen**: een bestand of categorie volgen; afmelden kan via **Mijn abonnementen**, ook als toegang later vervalt.
+- **Bestandscontrole**: huidige en oude bestanden controleren op ontbreken, grootte en checksum.
+- **PDF-venster**: beveiligd voorbeeld op dezelfde pagina, inclusief downloadknop.
+
+Oude versies worden vanaf installatie van 3.0.0 bij vervanging bewaard. Zorg voor voldoende privéopslag. E-mail gebruikt `wp_mail` en WP-Cron: configureer betrouwbare mailbezorging en een echte cronjob voor tijdige meldingen. Toegang op begin-/einddatums wordt direct gecontroleerd, onafhankelijk van cron. Export bevat ook oude bestandskopieën en planning; persoonlijke abonnementen, aanvragen, verleende individuele toegang en prullenbak blijven op de oorspronkelijke site.

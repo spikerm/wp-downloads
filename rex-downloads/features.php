@@ -52,7 +52,7 @@ final class Rex_Downloads_Features {
     }
     public function assets() {
         if (($_GET['page'] ?? '') === 'rex-download-categories') {
-            wp_enqueue_script('rex-category-sort',plugins_url('category-sort.js',__FILE__),['jquery','jquery-ui-sortable'],'2.0.0',true);
+            wp_enqueue_script('rex-category-sort',plugins_url('category-sort.js',__FILE__),['jquery','jquery-ui-sortable'],'3.0.0',true);
         }
     }
     public function sort_fields() {
@@ -106,10 +106,10 @@ final class Rex_Downloads_Features {
         }
         return $id ? [] : ['*'];
     }
-    public static function category_access($id) {
+    public static function category_access($id,$user=null) {
         $terms=wp_get_object_terms($id,'rex_download_category',['fields'=>'ids']);
         if(is_wp_error($terms)||!$terms){return false;}
-        $user=wp_get_current_user();
+        $user=$user?:wp_get_current_user();
         foreach($terms as $term){$roles=self::effective_category_roles((int)$term);if(in_array('*',$roles,true)||array_intersect($roles,(array)$user->roles)){return true;}}
         return false;
     }

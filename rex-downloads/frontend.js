@@ -56,6 +56,19 @@
             } catch (error) { status.textContent = error.message; }
             finally { buttons.forEach(b => b.disabled = false); }
         }));
+        root.querySelectorAll('.rex-watch,.rex-request').forEach(button => button.addEventListener('click', async () => {
+            const watch=button.classList.contains('rex-watch'), active=button.getAttribute('aria-pressed')!=='true';
+            const message=button.parentElement.querySelector('.rex-workflow-status')||status;
+            button.disabled=true;
+            try {const response=await fetch(root.dataset.ajaxUrl,{method:'POST',credentials:'same-origin',body:new URLSearchParams({action:watch?'rex_watch':'rex_request_access',nonce:root.dataset.workflowNonce,id:button.dataset.id,kind:button.dataset.kind||'category',active:active?'1':'0'})});const result=await response.json();if(!response.ok||!result.success)throw new Error(result.data&&result.data.message||'Opslaan mislukt.');message.textContent=result.data.message;if(watch){root.querySelectorAll('.rex-watch').forEach(other=>{if(other.dataset.id===button.dataset.id&&other.dataset.kind===button.dataset.kind){other.setAttribute('aria-pressed',String(active));other.textContent=other.dataset.kind==='category'?(active?'Categorie niet meer volgen':'Categorie volgen'):(active?'Niet meer volgen':'Volgen');}});}else{button.textContent='Aanvraag ingediend';}}
+            catch(error){message.textContent=error.message;}finally{button.disabled=false;}
+        }));
+        const dialog=root.querySelector('.rex-pdf-dialog');let opener;
+        if(dialog&&typeof dialog.showModal==='function'){
+            root.querySelectorAll('.rex-preview').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();opener=link;dialog.querySelector('iframe').src=link.href;dialog.querySelector('.rex-pdf-download').href=link.dataset.downloadUrl;dialog.querySelector('.rex-pdf-external').href=link.href;dialog.showModal();}));
+            dialog.querySelector('.rex-pdf-close').addEventListener('click',()=>dialog.close());
+            dialog.addEventListener('close',()=>{dialog.querySelector('iframe').src='about:blank';if(opener)opener.focus();});
+        }
         filter();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.rex-downloads').forEach(init));

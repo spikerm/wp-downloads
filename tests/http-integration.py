@@ -36,6 +36,8 @@ with tempfile.TemporaryDirectory(prefix='rex-http-') as fixture:
             else: raise AssertionError('Server failed to start')
             status,admin_html,_=request('admin')
             assert status==200 and b'name="version"' in admin_html and b'name="access_mode"' in admin_html
+            for page in ['manager','dashboard','trash','requests','integrity']:
+                code,html,_=request(page);assert code==200 and b'Fatal error' not in html,(page,html)
             status,front_html,_=request('frontend')
             assert status==200 and b'rex-toolbar' in front_html and b'rex-favorite' in front_html
             status,pdf,headers=request('preview',auth='tech',id=1,_wpnonce='valid')
@@ -82,7 +84,73 @@ with tempfile.TemporaryDirectory(prefix='rex-http-') as fixture:
             assert len(json.loads(request('state',site='B')[1])['posts'])==3
             assert request('export',auth='user',fields={'_wpnonce':'valid'})[0]==403
             assert request('import',site='B',fields={'_wpnonce':'bad'},archive=archive)[0]==403
-            print('HTTP downloads, PDF authorization, favorites, bulk import and ZIP roundtrip passed.')
+            # Old binaries are preserved and can be promoted without losing the replacement.
+            assert request('save',fields={'_wpnonce':'valid','id':1,'title':'Private PDF','media_id':102,'categories[]':[1],'roles[]':['rex_tech'],'access_mode':'inherit','version':'3.0','notify_subscribers':1})[0]==302
+            state=json.loads(request('state')[1]); old=state['meta']['1']['_rex_file_versions'][0]
+            assert request('version_download',id=1,key=old['key'],_wpnonce='valid')[1]==pdf
+            assert request('version_download',auth='user',id=1,key=old['key'],_wpnonce='valid')[0]==403
+            assert request('restore_version',id=1,key=old['key'],_wpnonce='valid')[0]==302
+            restored=request('download',auth='tech',id=1,_wpnonce='valid'); assert restored[1]==pdf,(restored[:2],pdf)
+            assert len(json.loads(request('state')[1])['meta']['1']['_rex_file_versions'])==1
+            exported=request('export',fields={'_wpnonce':'valid'})[1]
+            with zipfile.ZipFile(io.BytesIO(exported)) as z:
+                data=json.loads(z.read('manifest.json')); entry=next(d for d in data['downloads'] if d['title']=='Private PDF');assert len(entry['archives'])==1;assert z.read(entry['archives'][0]['entry'])==b'Firmware'
+                exported_entries={name:z.read(name) for name in z.namelist()}
+            for index,download in enumerate(data['downloads']):download['uuid']=f'{index+500:08x}-9999-9999-9999-999999999999'
+            exported_entries['manifest.json']=json.dumps(data).encode(); copy=io.BytesIO()
+            with zipfile.ZipFile(copy,'w') as z:
+                for name,contents in exported_entries.items():z.writestr(name,contents)
+            assert request('import',site='B',fields={'_wpnonce':'valid'},archive=copy.getvalue())[0]==302
+            imported=json.loads(request('state',site='B')[1]); imported_id=next(p['ID'] for p in imported['posts'].values() if imported['meta'][str(p['ID'])]['_rex_uuid']==entry['uuid'])
+            saved_version=imported['meta'][str(imported_id)]['_rex_file_versions'][0]
+            assert request('version_download',site='B',id=imported_id,key=saved_version['key'],_wpnonce='valid')[1]==b'Firmware'
+
+            assert request('watch',auth='user',fields={'nonce':'valid','id':1,'kind':'file','active':1})[0]==403
+
+            # Scheduling rejects invalid ranges before any replacement or metadata change.
+            assert request('save',fields={'_wpnonce':'valid','id':1,'title':'Invalid','media_id':102,'publish_at':'2030-02-01T00:00','expire_at':'2029-01-01T00:00'})[0]==400
+            assert json.loads(request('state')[1])['posts']['1']['post_title']=='Private PDF'
+            assert request('bulk_files',fields={'_wpnonce':'valid','ids':'[1]','bulk_action':'schedule','publish_at':'2030-01-01T00:00'})[0]==302
+            assert request('download',auth='tech',id=1,_wpnonce='valid')[0]==403
+            assert request('bulk_files',fields={'_wpnonce':'valid','ids':'[1]','bulk_action':'schedule'})[0]==302
+            assert request('request_access',auth='user',fields={'nonce':'bad','id':1})[0]==403
+            result=json.loads(request('request_access',auth='user',fields={'nonce':'valid','id':1})[1]);assert result['success']
+            state=json.loads(request('state')[1]); access=next(p['ID'] for p in state['posts'].values() if p['post_type']=='rex_access_request')
+            assert request('decide_request',auth='user',fields={'_wpnonce':'valid','id':access,'operation':'approve'})[0]==403
+            assert request('decide_request',fields={'_wpnonce':'valid','id':access,'operation':'approve'})[0]==302
+            assert request('download',auth='user',id=1,_wpnonce='valid')[0]==200
+            assert request('watch',auth='user',fields={'nonce':'valid','id':1,'kind':'file','active':1})[0]==200
+            assert request('notify')[0]==200
+            assert len(json.loads(request('state')[1])['mails'])==1
+            request('notify');assert len(json.loads(request('state')[1])['mails'])==1
+            assert request('decide_request',fields={'_wpnonce':'valid','id':access,'operation':'revoke'})[0]==302
+            assert request('download',auth='user',id=1,_wpnonce='valid')[0]==403
+            assert request('watch',auth='user',fields={'nonce':'valid','id':1,'kind':'file','active':0})[0]==200
+            assert request('file_order',fields={'_wpnonce':'valid','category':1,'order':'[1]'})[0]==302
+            assert request('file_order',fields={'_wpnonce':'valid','order':'[1,1]'})[0]==400
+            assert request('delete',fields={'_wpnonce':'valid','id':1})[0]==302
+            assert request('download',auth='tech',id=1,_wpnonce='valid')[0]==403
+            assert json.loads(request('state')[1])['posts']['1']['post_status']=='rex_trash'
+            assert request('trash_action',fields={'_wpnonce':'valid','id':1,'operation':'restore'})[0]==302
+            restored=request('download',auth='tech',id=1,_wpnonce='valid'); assert restored[1]==pdf,(restored[:2],pdf)
+            scan=json.loads(request('integrity_begin',fields={'nonce':'valid'})[1])['data']
+            results=[]
+            while True:
+                batch=json.loads(request('integrity_batch',fields={'nonce':'valid','token':scan['token']})[1])['data'];results.extend(batch['issues'])
+                if batch['done']:break
+            assert not any('ontbreekt' in issue or 'beschadigd' in issue for issue in results)
+            state=json.loads(request('state')[1]); key=state['meta']['1']['_rex_key']
+            Path(fixture,'A','private',key).write_bytes(b'changed')
+            scan=json.loads(request('integrity_begin',fields={'nonce':'valid'})[1])['data'];results=[]
+            while True:
+                batch=json.loads(request('integrity_batch',fields={'nonce':'valid','token':scan['token']})[1])['data'];results.extend(batch['issues'])
+                if batch['done']:break
+            assert any('beschadigd' in issue for issue in results)
+            assert request('delete',fields={'_wpnonce':'valid','id':1})[0]==302
+            assert request('trash_action',fields={'_wpnonce':'valid','id':1,'operation':'purge'})[0]==302
+            assert not Path(fixture,'A','private',key).exists()
+            assert not Path(fixture,'A','private',state['meta']['1']['_rex_file_versions'][0]['key']).exists()
+            print('HTTP access, versions, archive export, scheduling, grants, subscriptions, integrity and trash passed.')
         except Exception:
             log.seek(0);print(log.read().decode(errors='replace'));raise
         finally:

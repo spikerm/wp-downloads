@@ -1,18 +1,23 @@
-WP Dares Downloads 2.0.0
+WP Dares Downloads 3.0.0
 
-- Zoeken op naam, bestandsnaam, beschrijving en versie; filteren op categorie, bestandstype en favorieten.
-- Categorieën verslepen met behoud van de substructuur, naast de bestaande Omhoog/Omlaag-knoppen.
-- Downloadstatistieken per bestand en gebruiker, plus een gepagineerd downloadlogboek.
-- Versie, datum en wijzigingsgeschiedenis per bestand, met Nieuw/Bijgewerkt-labels.
-- Persoonlijke favorieten die bij het WordPress-account worden opgeslagen.
-- Beveiligde PDF-voorbeelden via dezelfde toegangscontrole als downloads.
-- Maximaal 50 mediabestanden tegelijk toevoegen met gezamenlijke categorieën en toegangsinstellingen.
-- Toegangsrollen per categorie, overerving naar subcategorieën en optionele eigen rollen per bestand.
-- Accentkleur, compactheid, standaard ingeklapte mappen en labelduur instellen.
-- Export/import van bestanden, categorieën, downloadrollen, versies en instellingen.
-- Checksums en veilige bestandsnamen bij import; bestaande export-ID's worden overgeslagen.
-- Instelbare logbewaring (standaard 90 dagen), optionele gebruikerskoppeling, geen IP-opslag.
+- Bestandsvolgorde verslepen en met knoppen aanpassen, met een eigen volgorde per categorie.
+- Bulkbeheer: categorieën, rollen en publicatieplanning vervangen of bestanden naar de prullenbak verplaatsen.
+- Eigen prullenbak met herstellen en definitief verwijderen; geen automatische verwijdering door WordPress.
+- Echte oude bestandskopieën bewaren, downloaden en terugzetten. Ook de vervangen huidige versie blijft behouden.
+- Toegang tot een categorie aanvragen; beheerders kunnen goedkeuren, afwijzen en intrekken.
+- Bestanden en categorieën volgen met e-mailupdates; persoonlijke abonnementen op de downloadpagina beheren.
+- Publiceren vanaf een datum en toegang beëindigen op een einddatum, in de WordPress-tijdzone.
+- Bestandscontrole voor aanwezigheid, grootte en SHA-256, inclusief oude versies.
+- PDF bekijken in een venster op de downloadpagina met een downloadknop en apart openen als alternatief.
+- Dashboard met populaire en recent bijgewerkte downloads, open aanvragen en controleresultaten.
+- Export/import neemt oude bestandskopieën en publicatieplanning mee.
 
-Bestaande bestanden houden hun huidige toegangsrollen. Categorietoegang is optioneel per bestand. Statistieken beginnen vanaf deze update en tellen gestarte overdrachten/openingen binnen de bewaartermijn.
+Alle bestaande functies blijven beschikbaar: meerdere rollen, categorieën/subcategorieën, mediabibliotheek, bestandsnamen overnemen, categorievolgorde, zoeken, filters, favorieten, statistieken, logboek, vormgeving en GitHub-updates.
 
-Export/import vereist de PHP ZIP-extensie. Maximaal 500 bestanden en 512 MB uitgepakt per export/import; de WordPress/PHP-uploadlimiet blijft gelden. Gebruikersaccounts, favorieten en logs worden niet geëxporteerd. Als bestaande categorierollen op de doelsite anders zijn, bewaart een geïmporteerd bestand zijn oorspronkelijke toegang als eigen bestandsrollen.
+Oude bestanden worden vanaf deze update bewaard bij vervanging. Eerder verwijderde versies kunnen niet worden teruggehaald. Goedkeuring geeft toegang tot de huidige bestanden in de categorie en subcategorieën; nieuwe bestanden krijgen niet automatisch een afzonderlijke goedkeuring. Overlappende goedkeuringen blijven geldig bij intrekken.
+
+E-mailupdates gebruiken WordPress wp_mail en WP-Cron. Stel een echte cronjob en betrouwbare mailbezorging in voor tijdige meldingen. Abonnees zonder actuele toegang ontvangen geen melding. Publicatiedatums worden bij iedere download gecontroleerd en zijn niet afhankelijk van cron.
+
+Prullenbak en oude versies gebruiken schijfruimte totdat een beheerder definitief verwijdert. Een eerste controle van een ouder bestand zonder checksum maakt een referentie en kan eerdere schade niet aantonen.
+
+Export/import vereist PHP ZIP. Maximaal 500 downloads, 5000 oude bestandsversies en 512 MB uitgepakt, binnen de uploadlimiet. Gebruikersaccounts, favorieten, abonnementen, toegangsaanvragen/toestemmingen, prullenbak en logs worden niet geëxporteerd. Bestaande export-ID's worden overgeslagen.

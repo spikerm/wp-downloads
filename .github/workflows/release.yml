@@ -27,10 +27,12 @@ jobs:
           php tests/frontend.php --preview
           node tests/browser-behavior.js
           php tests/access-and-manifest.php
+          php tests/workflow.php
           python3 tests/http-integration.py
           node --check rex-downloads/frontend.js
           node --check rex-downloads/category-sort.js
           node --check rex-downloads/media-selector.js
+          node --check rex-downloads/workflow-admin.js
       - name: Build installable archive
         id: build
         run: |

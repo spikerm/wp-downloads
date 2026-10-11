@@ -16,6 +16,8 @@ function get_current_user_id(){return 1;}
 function absint($value){return abs((int)$value);}
 function wp_date($format,$time){return date($format,$time);}
 require __DIR__.'/../rex-downloads/features.php';
+require __DIR__.'/../rex-downloads/workflow.php';
+function is_user_logged_in(){return true;}
 require __DIR__.'/../rex-downloads/frontend.php';
 $rows=[];
 foreach ([[1,0,'Handleidingen'],[2,1,'Daikin'],[3,2,'VRF'],[4,0,'Lege categorie']] as $term){$rows[]=['term'=>(object)['term_id'=>$term[0],'parent'=>$term[1],'name'=>$term[2]]];}
@@ -26,5 +28,5 @@ foreach (['Handleidingen','Daikin','VRF','Lege categorie','Overige bestanden','&
 if(strpos($html,'GEHEIM')!==false || strpos($html,'id=2')!==false){throw new Exception('Unauthorized file leaked');}
 if(substr_count($html,'<details')!==substr_count($html,'</details>')){throw new Exception('Unbalanced folders');}
 ob_start();Rex_Downloads_Features::toolbar($rows);$toolbar=ob_get_clean();
-if(in_array('--preview',$argv,true)){file_put_contents('/tmp/rex-frontend-preview.html','<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Downloads</title><body style="background:#eef1f5;padding:24px"><main style="max-width:960px;margin:auto"><section class="rex-downloads" data-ajax-url="https://example.test/wp-admin/admin-ajax.php" data-favorite-nonce="test" style="--rex-accent:#17639e">'.Rex_Downloads_Frontend::styles().Rex_Downloads_Features::styles().'<h2>Downloads</h2><p class="rex-account">Ingelogd als Rex · Uitloggen</p>'.$toolbar.$html.'</section></main></body></html>');}
+if(in_array('--preview',$argv,true)){file_put_contents('/tmp/rex-frontend-preview.html','<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Downloads</title><body style="background:#eef1f5;padding:24px"><main style="max-width:960px;margin:auto"><section class="rex-downloads" data-ajax-url="https://example.test/wp-admin/admin-ajax.php" data-favorite-nonce="test" style="--rex-accent:#17639e">'.Rex_Downloads_Frontend::styles().Rex_Downloads_Features::styles().'<h2>Downloads</h2><p class="rex-account">Ingelogd als Rex · Uitloggen</p>'.$toolbar.$html.Rex_Downloads_Workflow::pdf_dialog().'</section></main></body></html>');}
 echo "Frontend nesting and access filtering passed.\n";

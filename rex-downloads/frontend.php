@@ -25,7 +25,8 @@ final class Rex_Downloads_Frontend {
                 if (isset($seen[$id])) { continue; }
                 $seen[$id] = true;
                 echo '<details class="rex-folder" data-category="'.$id.'" '.(Rex_Downloads_Features::settings()['collapsed']?'':'open').'><summary><span class="rex-folder-icon" aria-hidden="true">▰</span><span>'.esc_html($term->name).'</span></summary><div class="rex-folder-content">';
-                foreach ($files[$id] ?? [] as $post) { self::file_row($post); }
+                Rex_Downloads_Workflow::category_actions($id);
+                foreach (Rex_Downloads_Workflow::ordered_files($files[$id] ?? [],$id) as $post) { self::file_row($post); }
                 $render($id);
                 if (empty($files[$id]) && empty($children[$id])) { echo '<p class="rex-empty">Geen downloads beschikbaar in deze categorie.</p>'; }
                 echo '</div></details>';
@@ -39,7 +40,7 @@ final class Rex_Downloads_Frontend {
             if (!isset($seen[$id])) {
                 echo '<details class="rex-folder" data-category="'.$id.'" '.(Rex_Downloads_Features::settings()['collapsed']?'':'open').'><summary>'.esc_html($row['term']->name).'</summary><div class="rex-folder-content">';
                 $seen[$id] = true;
-                foreach ($files[$id] ?? [] as $post) { self::file_row($post); }
+                foreach (Rex_Downloads_Workflow::ordered_files($files[$id] ?? [],$id) as $post) { self::file_row($post); }
                 $render($id); echo '</div></details>';
             }
         }
@@ -70,7 +71,8 @@ final class Rex_Downloads_Frontend {
         if($version){echo '<span class="rex-version">v'.esc_html($version).'</span>';}
         if($updated||$created){echo '<span class="rex-version">'.esc_html(wp_date('d-m-Y',$updated?:$created)).'</span>';}
         echo '<button type="button" class="rex-favorite" data-id="'.(int)$post->ID.'" aria-pressed="'.($favorite?'true':'false').'">'.($favorite?'★':'☆').' Favoriet</button>';
-        if($extension==='PDF'){$preview=wp_nonce_url(add_query_arg(['action'=>'rex_preview','id'=>$post->ID],admin_url('admin-post.php')),'rex_preview_'.$post->ID);echo '<a class="rex-preview" href="'.esc_url($preview).'" target="_blank" rel="noopener">PDF bekijken ↗</a>';}
+        if($extension==='PDF'){$preview=wp_nonce_url(add_query_arg(['action'=>'rex_preview','id'=>$post->ID],admin_url('admin-post.php')),'rex_preview_'.$post->ID);echo '<a class="rex-preview" data-download-url="'.esc_url($url).'" href="'.esc_url($preview).'" target="_blank" rel="noopener">PDF bekijken ↗</a>';}
+        Rex_Downloads_Workflow::file_actions($post->ID);
         echo '</div>';
         $history=get_post_meta($post->ID,'_rex_history',true);
         $notes=get_post_meta($post->ID,'_rex_changelog',true);
