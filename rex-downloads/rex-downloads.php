@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: WP Dares Downloads
- * Description: Afgeschermde downloads met WordPress-login en bestaande gebruikersrollen. Shortcode: [rex_downloads].
- * Version: 1.3.4
+ * Description: Beveiligde downloadbibliotheek met rollen, categorieën, zoeken, favorieten, versies en statistieken. Shortcode: [rex_downloads].
+ * Version: 2.0.0
  * Plugin URI: https://github.com/spikerm/wp-downloads
  * Update URI: https://github.com/spikerm/wp-downloads
  * Author: Rex Markesteijn
@@ -18,7 +18,7 @@ final class Rex_Downloads {
         add_action('admin_post_rex_order_category',[$this,'order_category']);
         add_action('admin_post_rex_delete_category',[$this,'delete_category']);
         add_action('admin_enqueue_scripts',function(){
-            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'1.3.4',true); }
+            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'2.0.0',true); }
         });
         add_action('admin_post_rex_create_role',[$this,'create_role']);
         add_action('show_user_profile',[$this,'user_roles']);
@@ -126,12 +126,13 @@ final class Rex_Downloads {
         echo '</select>';
 
         echo '</p><p class="description">Kies een bestaande categorie om een subcategorie te maken. Ook meerdere niveaus zijn mogelijk.</p>';
+        do_action('rex_category_fields',$edit_id);
         submit_button($edit ? 'Categorie opslaan' : 'Categorie toevoegen');
         if ($edit) { echo '<p><a href="'.esc_url(admin_url('admin.php?page=rex-download-categories')).'">Bewerken annuleren</a></p>'; }
-        echo '</form><table class="widefat striped"><thead><tr><th>Categorie</th><th>Aantal bestanden</th><th>Volgorde</th><th>Acties</th></tr></thead><tbody>';
+        echo '</form><table class="widefat striped"><thead><tr><th>Categorie</th><th>Aantal bestanden</th><th>Volgorde</th><th>Acties</th></tr></thead><tbody id="rex-category-sort">';
         foreach ($this->category_tree() as $row) {
             $term = $row['term'];
-            echo '<tr><td><span style="display:inline-block;padding-left:'.(int)($row['depth']*22).'px">'.($row['depth'] ? '↳ ' : '').esc_html($term->name).'</span></td><td>'.(int)$term->count.'</td><td>';
+            echo '<tr data-term-id="'.(int)$term->term_id.'" data-parent-id="'.(int)$term->parent.'"><td><span class="rex-drag-handle" tabindex="0" title="Versleep binnen dezelfde hoofdcategorie" style="cursor:grab;margin-right:8px">↕</span><span style="display:inline-block;padding-left:'.(int)($row['depth']*22).'px">'.($row['depth'] ? '↳ ' : '').esc_html($term->name).'</span></td><td>'.(int)$term->count.'</td><td>';
             foreach (['up'=>'↑ Omhoog','down'=>'↓ Omlaag'] as $direction=>$label) {
                 echo '<form style="display:inline-block;margin:2px" method="post" action="'.esc_url(admin_url('admin-post.php')).'">';
                 wp_nonce_field('rex_manage');
@@ -141,7 +142,7 @@ final class Rex_Downloads {
             wp_nonce_field('rex_manage');
             echo '<input type="hidden" name="action" value="rex_delete_category"><input type="hidden" name="category_id" value="'.(int)$term->term_id.'"><button class="button-link-delete">Verwijderen</button></form></td></tr>';
         }
-        echo '</tbody></table><p>Gebruik Omhoog en Omlaag om categorieën binnen dezelfde hoofdcategorie te verplaatsen. Subcategorieën verplaatsen mee met hun bovenliggende map. De volgorde geldt ook op de downloadpagina.</p></div>';
+        echo '</tbody></table>'; do_action('rex_category_sort_fields'); echo '<p>Gebruik Omhoog en Omlaag om categorieën binnen dezelfde hoofdcategorie te verplaatsen. Subcategorieën verplaatsen mee met hun bovenliggende map. De volgorde geldt ook op de downloadpagina.</p></div>';
     }
     public function save_category() {
         $this->guard();
@@ -160,6 +161,7 @@ final class Rex_Downloads {
             $result = wp_insert_term($name,'rex_download_category',['parent'=>$parent]);
         }
         if (is_wp_error($result)) { wp_die(esc_html($result->get_error_message())); }
+        do_action('rex_category_saved',(int)$result['term_id']);
         wp_safe_redirect(admin_url('admin.php?page=rex-download-categories')); exit;
     }
     public function delete_category() {
@@ -230,7 +232,7 @@ final class Rex_Downloads {
             else { $user->remove_role($key); }
         }
     }
-    private function storage() {
+    public function storage() {
         // Put this directory outside every publicly served directory.
         $root = realpath(isset($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] : ABSPATH);
         if (!$root) { $root = realpath(ABSPATH); }
@@ -246,9 +248,10 @@ final class Rex_Downloads {
         @chmod($real,0700);
         return $real;
     }
-    private function allowed($id) {
+    public function allowed($id) {
         if (!is_user_logged_in()) { return false; }
         if (current_user_can('manage_options')) { return true; }
+        if (get_post_meta($id,'_rex_access_mode',true) === 'inherit') { return Rex_Downloads_Features::category_access($id); }
         $roles = (array)get_post_meta($id,'_rex_roles',true);
         return in_array('*',$roles,true) || (bool)array_intersect($roles,wp_get_current_user()->roles);
     }
@@ -257,7 +260,7 @@ final class Rex_Downloads {
         check_admin_referer('rex_manage');
     }
     private function back() { wp_safe_redirect(admin_url('admin.php?page=rex-downloads')); exit; }
-    private function file($id) {
+    public function file($id) {
         $dir = $this->storage();
         if (is_wp_error($dir)) { return false; }
         $key = get_post_meta($id,'_rex_key',true);
@@ -265,7 +268,7 @@ final class Rex_Downloads {
         $path = realpath($dir.'/'.$key);
         return $path && dirname($path) === $dir && is_file($path) ? $path : false;
     }
-    public function save() {
+    public function save($redirect = true) {
         $this->guard();
         $id = isset($_POST['id']) ? absint($_POST['id']) : 0;
         if ($id && get_post_type($id) !== 'rex_download') { wp_die('Ongeldig bestand.'); }
@@ -288,17 +291,9 @@ final class Rex_Downloads {
             @chmod($dir.'/'.$key,0600);
             $new = ['key'=>$key,'name'=>$name,'size'=>filesize($dir.'/'.$key)];
         } elseif (!empty($_POST['media_id'])) {
-            $media_id = absint($_POST['media_id']);
-            if (get_post_type($media_id) !== 'attachment' || !current_user_can('edit_post',$media_id)) { wp_die('Geen toegang tot dit mediabestand.'); }
-            $source = get_attached_file($media_id);
-            $source = is_string($source) ? realpath($source) : false;
-            $uploads = wp_upload_dir();
-            $base = realpath($uploads['basedir']);
-            if (!$source || !$base || strpos(wp_normalize_path($source),trailingslashit(wp_normalize_path($base))) !== 0 || !is_file($source) || !is_readable($source)) { wp_die('Alleen lokale bestanden in de mediabibliotheek kunnen worden geïmporteerd.'); }
-            $name = sanitize_file_name(basename($source));
-            $ext = strtolower(pathinfo($name,PATHINFO_EXTENSION));
-            if (!in_array($ext,['pdf','zip','txt','csv','doc','docx','xls','xlsx','ppt','pptx','jpg','jpeg','png','webp','mp3','mp4','stl','bin','hex'],true)) { wp_die('Dit bestandstype is niet toegestaan.'); }
-            if (!filesize($source) || filesize($source) > wp_max_upload_size()) { wp_die('Mediabestand is leeg of te groot.'); }
+            $source=Rex_Downloads_Migration::media_source(absint($_POST['media_id']));
+            if(is_wp_error($source)){wp_die(esc_html($source->get_error_message()));}
+            $name=sanitize_file_name(basename($source));
             $key = bin2hex(random_bytes(24)).'.bin';
             if (!copy($source,$dir.'/'.$key)) { @unlink($dir.'/'.$key); wp_die('Mediabestand kon niet worden gekopieerd.'); }
             @chmod($dir.'/'.$key,0600);
@@ -314,7 +309,9 @@ final class Rex_Downloads {
             foreach ($new as $k=>$v) { update_post_meta($result,'_rex_'.$k,$v); }
             if ($old) { unlink($old); }
         }
-        $this->back();
+        do_action('rex_download_saved',$result,(bool)$new,(bool)$id);
+        if ($redirect) { $this->back(); }
+        return $result;
     }
     public function delete() {
         $this->guard(); $id = absint($_POST['id'] ?? 0);
@@ -336,6 +333,7 @@ final class Rex_Downloads {
         header('X-Content-Type-Options: nosniff');
         header('Content-Disposition: attachment; filename="download.'.sanitize_key(pathinfo($name,PATHINFO_EXTENSION)).'"; filename*=UTF-8\'\''.rawurlencode($name));
         header('Content-Length: '.filesize($file));
+        do_action('rex_download_served',$id,'download');
         session_write_close();
         while (!feof($handle)) { echo fread($handle,1024*1024); flush(); if (connection_aborted()) { break; } }
         fclose($handle); exit;
@@ -351,10 +349,11 @@ final class Rex_Downloads {
         echo '<div class="wrap"><h1>'.esc_html($heading).'</h1><p>Plaats <code>[rex_downloads]</code> op een pagina. Rollen worden rechtstreeks uit WordPress gehaald.</p>';
         $storage = $this->storage();
         if (is_wp_error($storage)) { echo '<div class="notice notice-error"><p>'.esc_html($storage->get_error_message()).'</p></div>'; }
+        if (isset($_GET['imported'])) { echo '<div class="notice notice-success"><p>'.absint($_GET['imported']).' bestanden toegevoegd.</p></div>'; }
         echo '<h2>'.($edit ? 'Download bewerken' : 'Nieuwe download').'</h2><form method="post" enctype="multipart/form-data" action="'.esc_url(admin_url('admin-post.php')).'">';
         wp_nonce_field('rex_manage');
         echo '<input type="hidden" name="action" value="rex_save"><input type="hidden" name="id" value="'.$edit.'"><table class="form-table"><tr><th>Titel</th><td><input class="regular-text" name="title" id="rex-download-title" required value="'.esc_attr($post ? $post->post_title : '').'"></td></tr><tr><th>Beschrijving</th><td><textarea class="large-text" rows="3" name="description">'.esc_textarea($post ? $post->post_content : '').'</textarea></td></tr><tr><th>Bestand</th><td>';
-        echo '<input type="hidden" name="media_id" id="rex-media-id" value="0"><p><button type="button" class="button" id="rex-media-select">Kies uit mediabibliotheek</button> <span id="rex-media-name"></span> <button type="button" class="button" id="rex-media-clear">Selectie wissen</button></p><p class="description">Selecteer een bestaand mediabestand. Bij bewerken alleen kiezen om het bestand te vervangen. De beveiligde kopie staat apart; het oorspronkelijke mediabestand behoudt zijn openbare URL.</p>';
+        echo '<input type="hidden" name="media_id" id="rex-media-id" value="0"><input type="hidden" name="media_ids" id="rex-media-ids" value=""><input type="hidden" id="rex-edit-id" value="'.$edit.'"><p><button type="button" class="button" id="rex-media-select">Kies uit mediabibliotheek</button> <span id="rex-media-name"></span> <button type="button" class="button" id="rex-media-clear">Selectie wissen</button></p><p class="description">Selecteer een bestaand mediabestand. Bij bewerken alleen kiezen om het bestand te vervangen. De beveiligde kopie staat apart; het oorspronkelijke mediabestand behoudt zijn openbare URL.</p>';
         echo '<p><label><input type="checkbox" id="rex-use-filename" '.checked(!$edit,true,false).'> Bestandsnaam overnemen als downloadnaam</label></p><p class="description">Bij het selecteren wordt de volledige bestandsnaam inclusief extensie ingevuld bij Titel. Je kunt de titel daarna zelf aanpassen. Vink uit om je bestaande titel te behouden.</p>';
 
         echo '</td></tr><tr><th>Categorieën</th><td>';
@@ -368,6 +367,7 @@ final class Rex_Downloads {
         foreach (array_merge(['*'=>'Alle ingelogde gebruikers'],wp_roles()->get_names()) as $key=>$label) {
             echo '<label style="display:block;margin:8px 0"><input type="checkbox" name="roles[]" value="'.esc_attr($key).'" '.checked(in_array($key,$selected,true),true,false).'> '.esc_html(translate_user_role($label)).'</label>';
         }
+        do_action('rex_download_extra_fields',$edit);
         echo '<p>Beheerders hebben altijd toegang. Geen vinkjes: alleen beheerders. Rollen zijn exacte keuzes; hogere rollen krijgen niet automatisch toegang.</p></td></tr></table>';
         submit_button('Download opslaan'); echo '</form><h2>Bestanden</h2><table class="widefat striped"><thead><tr><th>Titel</th><th>Bestand</th><th>Toegang</th><th>Acties</th></tr></thead><tbody>';
         $query = ['post_type'=>'rex_download','numberposts'=>-1];
@@ -375,7 +375,7 @@ final class Rex_Downloads {
         if ($page === 'rex-download-new') { $query['post__in'] = [0]; }
         foreach (get_posts($query) as $item) {
             $roles = (array)get_post_meta($item->ID,'_rex_roles',true);
-            $labels = array_map(function($r){ return $r === '*' ? 'Alle ingelogde gebruikers' : translate_user_role(wp_roles()->get_names()[$r] ?? $r); },$roles);
+            $labels = get_post_meta($item->ID,'_rex_access_mode',true)==='inherit' ? ['Rollen van de categorie'] : array_map(function($r){ return $r === '*' ? 'Alle ingelogde gebruikers' : translate_user_role(wp_roles()->get_names()[$r] ?? $r); },$roles);
             echo '<tr><td>'.esc_html($item->post_title).'</td><td>'.esc_html(get_post_meta($item->ID,'_rex_name',true)).'</td><td>'.esc_html(implode(', ',$labels) ?: 'Alleen beheerders').'</td><td><a href="'.esc_url(admin_url('admin.php?page=rex-downloads&edit='.$item->ID)).'">Bewerken</a><form style="display:inline;margin-left:15px" method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return confirm(\'Bestand definitief verwijderen?\')">';
             wp_nonce_field('rex_manage'); echo '<input type="hidden" name="action" value="rex_delete"><input type="hidden" name="id" value="'.$item->ID.'"><button class="button-link-delete">Verwijderen</button></form></td></tr>';
         }
@@ -383,20 +383,26 @@ final class Rex_Downloads {
     }
     public function shortcode() {
         ob_start();
-        echo '<section class="rex-downloads">'.Rex_Downloads_Frontend::styles().'<h2>Downloads</h2>';
+        wp_enqueue_script('rex-download-frontend',plugins_url('frontend.js',__FILE__),[], '2.0.0',true);
+        $settings = Rex_Downloads_Features::settings();
+        echo '<section data-ajax-url="'.esc_url(admin_url('admin-ajax.php')).'" data-favorite-nonce="'.esc_attr(wp_create_nonce('rex_favorite')).'" class="rex-downloads rex-density-'.esc_attr($settings['density']).'" style="--rex-accent:'.esc_attr($settings['accent']).'">'.Rex_Downloads_Frontend::styles().Rex_Downloads_Features::styles().'<h2>Downloads</h2>';
         if (!is_user_logged_in()) {
             echo '<p>Log in met je WordPress-account om je bestanden te bekijken.</p>';
             wp_login_form(['redirect'=>get_permalink(),'label_username'=>'Gebruikersnaam of e-mailadres','label_password'=>'Wachtwoord','label_remember'=>'Ingelogd blijven','label_log_in'=>'Inloggen','id_username'=>'rex-user','id_password'=>'rex-pass','id_remember'=>'rex-remember','id_submit'=>'rex-submit']);
             echo '<a href="'.esc_url(wp_lostpassword_url(get_permalink())).'">Wachtwoord vergeten?</a>';
         } else {
             echo '<p class="rex-account">Ingelogd als '.esc_html(wp_get_current_user()->display_name).' · <a href="'.esc_url(wp_logout_url(get_permalink())).'">Uitloggen</a></p>';
+            Rex_Downloads_Features::toolbar($this->category_tree());
             Rex_Downloads_Frontend::files($this->category_tree(), get_posts(['post_type'=>'rex_download','post_status'=>'publish','numberposts'=>-1,'orderby'=>'title','order'=>'ASC']), function($id){ return $this->allowed($id); });
         }
         echo '</section>'; return ob_get_clean();
     }
 }
+require_once __DIR__.'/features.php';
 require_once __DIR__.'/frontend.php';
-new Rex_Downloads();
+$rex_downloads_core = new Rex_Downloads();
+new Rex_Downloads_Features($rex_downloads_core);
+add_action('deactivate_'.plugin_basename(__FILE__),function(){wp_clear_scheduled_hook('rex_download_prune');});
 
 require_once __DIR__.'/github-updater.php';
-new Rex_Downloads_GitHub_Updater(__FILE__, '1.3.4');
+new Rex_Downloads_GitHub_Updater(__FILE__, '2.0.0');

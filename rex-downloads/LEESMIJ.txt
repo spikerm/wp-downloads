@@ -1,4 +1,4 @@
-WP DARES DOWNLOADS 1.3.4
+WP DARES DOWNLOADS 2.0.0
 Installatie: WordPress > Plugins > Nieuwe plugin > Plugin uploaden > kies ZIP > activeren.
 Maak een pagina Downloads en plaats de shortcode [rex_downloads] in een Shortcode-blok.
 Beheer bestanden via WordPress > Downloads. Alleen gebruikers met manage_options kunnen beheren.
@@ -77,3 +77,13 @@ Nieuwe downloads: standaard aan. Bewerken: standaard uit. Titel blijft aanpasbaa
 
 1.3.4: Categorievolgorde instellen met Omhoog/Omlaag via Downloads > Categorieën.
 Volgorde geldt per niveau, ook op de downloadpagina en in selectielijsten.
+
+2.0.0: Uitgebreide bibliotheek met zoeken, filters, favorieten, PDF-voorbeelden,
+versies/wijzigingslog, Nieuw/Bijgewerkt-labels, bulkmediaselectie (max. 50),
+categorierollen, versleepbare categorieën, statistieken/logboek, vormgeving en export/import.
+Bestaande toegang blijft behouden. Kies categorietoegang expliciet per bestand.
+Statistieken tellen gestarte downloads/openingen; standaardbewaring 90 dagen.
+Gebruikerskoppeling instelbaar; geen IP-opslag. Logopschoning via WordPress cron.
+Export/import vereist PHP ZIP, max. 500 bestanden en 512 MB uitgepakt.
+Gebruikersaccounts, favorieten en logs worden niet meegenomen in exports.
+Versiegeschiedenis bewaart teksten/versies, geen oude bestandskopieën.

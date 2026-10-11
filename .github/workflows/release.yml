@@ -13,13 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
       - name: Check PHP and updater behavior
         run: |
           find rex-downloads tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/updater.php
           php tests/categories.php
           php tests/category-order.php
-          php tests/frontend.php
+          php tests/frontend.php --preview
+          node tests/browser-behavior.js
+          php tests/access-and-manifest.php
+          python3 tests/http-integration.py
+          node --check rex-downloads/frontend.js
+          node --check rex-downloads/category-sort.js
+          node --check rex-downloads/media-selector.js
       - name: Build installable archive
         id: build
         run: |

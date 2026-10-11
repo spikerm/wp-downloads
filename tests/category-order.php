@@ -1,5 +1,6 @@
 <?php
 define('ABSPATH',__DIR__);
+function do_action(...$args){}
 function add_action(...$args){} function add_shortcode(...$args){} function add_filter(...$args){}
 function plugin_basename($file){return 'rex-downloads/rex-downloads.php';}
 function current_user_can(...$args){return true;} function check_admin_referer($value){}

@@ -24,7 +24,7 @@ final class Rex_Downloads_Frontend {
                 $id = (int)$term->term_id;
                 if (isset($seen[$id])) { continue; }
                 $seen[$id] = true;
-                echo '<details class="rex-folder" open><summary><span class="rex-folder-icon" aria-hidden="true">▰</span><span>'.esc_html($term->name).'</span></summary><div class="rex-folder-content">';
+                echo '<details class="rex-folder" data-category="'.$id.'" '.(Rex_Downloads_Features::settings()['collapsed']?'':'open').'><summary><span class="rex-folder-icon" aria-hidden="true">▰</span><span>'.esc_html($term->name).'</span></summary><div class="rex-folder-content">';
                 foreach ($files[$id] ?? [] as $post) { self::file_row($post); }
                 $render($id);
                 if (empty($files[$id]) && empty($children[$id])) { echo '<p class="rex-empty">Geen downloads beschikbaar in deze categorie.</p>'; }
@@ -37,14 +37,14 @@ final class Rex_Downloads_Frontend {
         foreach ($rows as $row) {
             $id = (int)$row['term']->term_id;
             if (!isset($seen[$id])) {
-                echo '<details class="rex-folder" open><summary>'.esc_html($row['term']->name).'</summary><div class="rex-folder-content">';
+                echo '<details class="rex-folder" data-category="'.$id.'" '.(Rex_Downloads_Features::settings()['collapsed']?'':'open').'><summary>'.esc_html($row['term']->name).'</summary><div class="rex-folder-content">';
                 $seen[$id] = true;
                 foreach ($files[$id] ?? [] as $post) { self::file_row($post); }
                 $render($id); echo '</div></details>';
             }
         }
         if ($uncategorized) {
-            echo '<details class="rex-folder" open><summary><span class="rex-folder-icon" aria-hidden="true">▰</span><span>Overige bestanden</span></summary><div class="rex-folder-content">';
+            echo '<details class="rex-folder" data-category="0" '.(Rex_Downloads_Features::settings()['collapsed']?'':'open').'><summary><span class="rex-folder-icon" aria-hidden="true">▰</span><span>Overige bestanden</span></summary><div class="rex-folder-content">';
             foreach ($uncategorized as $post) { self::file_row($post); }
             echo '</div></details>';
         }
@@ -56,9 +56,26 @@ final class Rex_Downloads_Frontend {
         $filename = get_post_meta($post->ID,'_rex_name',true);
         $extension = strtoupper(pathinfo($filename,PATHINFO_EXTENSION));
         $size = size_format((int)get_post_meta($post->ID,'_rex_size',true));
-        echo '<a class="rex-file" href="'.esc_url($url).'"><span class="rex-file-icon" aria-hidden="true">↓</span><span class="rex-file-text"><span class="rex-file-title">'.esc_html($post->post_title).'</span>';
+        $favorite = in_array((int)$post->ID,Rex_Downloads_Features::favorites(),true);
+        $version = get_post_meta($post->ID,'_rex_version',true);
+        $created = (int)get_post_meta($post->ID,'_rex_created_at',true);
+        if (!$created && !empty($post->post_date_gmt)) { $created = strtotime($post->post_date_gmt.' UTC'); }
+        $updated = (int)get_post_meta($post->ID,'_rex_updated_at',true);
+        $days = Rex_Downloads_Features::settings()['badge_days']*86400;
+        echo '<div class="rex-file-group" data-id="'.(int)$post->ID.'" data-type="'.esc_attr(strtolower($extension)).'" data-favorite="'.($favorite?'1':'0').'" data-search="'.esc_attr($post->post_title.' '.$filename.' '.$post->post_content.' '.$version).'"><a class="rex-file" href="'.esc_url($url).'"><span class="rex-file-icon" aria-hidden="true">↓</span><span class="rex-file-text"><span class="rex-file-title">'.esc_html($post->post_title).'</span>';
         if ($post->post_content) { echo '<span class="rex-file-description">'.esc_html($post->post_content).'</span>'; }
-        echo '</span><span class="rex-file-size">'.esc_html($size).'</span><span class="rex-file-type">'.esc_html($extension ?: 'FILE').'</span><span class="rex-sr-only"> — bestand downloaden</span></a>';
+        echo '</span><span class="rex-file-size">'.esc_html($size).'</span><span class="rex-file-type">'.esc_html($extension ?: 'FILE').'</span><span class="rex-sr-only"> — bestand downloaden</span></a><div class="rex-file-actions">';
+        if($created && time()-$created<$days){echo '<span class="rex-badge">Nieuw</span>';}
+        elseif($updated && time()-$updated<$days){echo '<span class="rex-badge rex-badge-updated">Bijgewerkt</span>';}
+        if($version){echo '<span class="rex-version">v'.esc_html($version).'</span>';}
+        if($updated||$created){echo '<span class="rex-version">'.esc_html(wp_date('d-m-Y',$updated?:$created)).'</span>';}
+        echo '<button type="button" class="rex-favorite" data-id="'.(int)$post->ID.'" aria-pressed="'.($favorite?'true':'false').'">'.($favorite?'★':'☆').' Favoriet</button>';
+        if($extension==='PDF'){$preview=wp_nonce_url(add_query_arg(['action'=>'rex_preview','id'=>$post->ID],admin_url('admin-post.php')),'rex_preview_'.$post->ID);echo '<a class="rex-preview" href="'.esc_url($preview).'" target="_blank" rel="noopener">PDF bekijken ↗</a>';}
+        echo '</div>';
+        $history=get_post_meta($post->ID,'_rex_history',true);
+        $notes=get_post_meta($post->ID,'_rex_changelog',true);
+        if((is_array($history)&&$history)||$notes){echo '<details class="rex-changelog"><summary>Wijzigingslog</summary>';if(is_array($history)&&$history){foreach(array_reverse($history) as $entry){echo '<p><strong>'.esc_html(($entry['version']?:'Zonder versie').' · '.wp_date('d-m-Y',$entry['time'])).'</strong><br>'.esc_html($entry['notes']).'</p>';}}else{echo '<p>'.esc_html($notes).'</p>';}echo '</details>';}
+        echo '</div>';
     }
     public static function styles() {
         return '<style>
