@@ -70,7 +70,7 @@ final class Rex_Downloads_Frontend {
         elseif($updated && time()-$updated<$days){echo '<span class="rex-badge rex-badge-updated">Bijgewerkt</span>';}
         if($version){echo '<span class="rex-version">v'.esc_html($version).'</span>';}
         if($updated||$created){echo '<span class="rex-version">'.esc_html(wp_date('d-m-Y',$updated?:$created)).'</span>';}
-        echo '<button type="button" class="rex-favorite" data-id="'.(int)$post->ID.'" aria-pressed="'.($favorite?'true':'false').'">'.($favorite?'★':'☆').' Favoriet</button>';
+        if(is_user_logged_in()){echo '<button type="button" class="rex-favorite" data-id="'.(int)$post->ID.'" aria-pressed="'.($favorite?'true':'false').'">'.($favorite?'★':'☆').' Favoriet</button>';}
         if($extension==='PDF'){$preview=wp_nonce_url(add_query_arg(['action'=>'rex_preview','id'=>$post->ID],admin_url('admin-post.php')),'rex_preview_'.$post->ID);echo '<a class="rex-preview" data-download-url="'.esc_url($url).'" href="'.esc_url($preview).'" target="_blank" rel="noopener">PDF bekijken ↗</a>';}
         Rex_Downloads_Workflow::file_actions($post->ID);
         echo '</div>';

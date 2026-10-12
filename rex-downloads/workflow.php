@@ -22,7 +22,7 @@ final class Rex_Downloads_Workflow {
         foreach(['dashboard'=>'Dashboard','manager'=>'Bestanden beheren','trash'=>'Prullenbak','requests'=>'Toegangsaanvragen','integrity'=>'Bestandscontrole'] as $method=>$label){add_submenu_page('rex-downloads',$label,$label,'manage_options','rex-download-'.$method,[$this,$method]);}
     }
     public function assets() {
-        if(strpos(sanitize_key($_GET['page']??''),'rex-download-')===0){wp_enqueue_script('rex-workflow-admin',plugins_url('workflow-admin.js',__FILE__),['jquery','jquery-ui-sortable'],'3.0.0',true);}
+        if(strpos(sanitize_key($_GET['page']??''),'rex-download-')===0){wp_enqueue_script('rex-workflow-admin',plugins_url('workflow-admin.js',__FILE__),['jquery','jquery-ui-sortable'],'3.1.0',true);}
     }
     private function guard($nonce='rex_workflow_admin') {if(!current_user_can('manage_options')){wp_die('Geen toegang.','',['response'=>403]);}check_admin_referer($nonce);}
     private function ajax_guard($admin=false){if(!is_user_logged_in()||($admin&&!current_user_can('manage_options'))){wp_send_json_error(['message'=>'Geen toegang.'],403);}check_ajax_referer('rex_workflow','nonce');}
@@ -37,7 +37,7 @@ final class Rex_Downloads_Workflow {
         if(!$user||empty($user->ID)||!self::available($id)){return false;}
         if(user_can($user,'manage_options')||in_array((int)$id,self::grants($user->ID),true)){return true;}
         if(get_post_meta($id,'_rex_access_mode',true)==='inherit'){return Rex_Downloads_Features::category_access($id,$user);}
-        $roles=(array)get_post_meta($id,'_rex_roles',true);return in_array('*',$roles,true)||(bool)array_intersect($roles,(array)$user->roles);
+        $roles=(array)get_post_meta($id,'_rex_roles',true);return in_array('@guest',$roles,true)||in_array('*',$roles,true)||(bool)array_intersect($roles,(array)$user->roles);
     }
     public static function watches($user_id=null){$value=get_user_meta($user_id??get_current_user_id(),'rex_download_watches',true);return is_array($value)?array_values(array_filter(array_unique($value),'is_string')):[];}
     public static function ordered_files($posts,$category=0) {
@@ -102,7 +102,7 @@ final class Rex_Downloads_Workflow {
         foreach($posts as $post){$id=$post->ID;echo '<tr data-file-id="'.(int)$id.'"><td><input type="checkbox" class="rex-bulk-checkbox" value="'.(int)$id.'" aria-label="'.esc_attr($post->post_title.' selecteren').'"></td><td><span class="rex-file-handle" style="cursor:grab">↕</span> <button type="button" class="button rex-file-up">↑</button> <button type="button" class="button rex-file-down">↓</button></td><td><a href="'.esc_url(admin_url('admin.php?page=rex-downloads&edit='.$id)).'">'.esc_html($post->post_title).'</a></td><td>'.esc_html(get_post_meta($id,'_rex_version',true)).'</td><td>'.(self::available($id)?'Beschikbaar':'Gepland / verlopen').'</td></tr>';}
         echo '</tbody></table>';submit_button('Bestandsvolgorde opslaan');echo '</form><h2>Bulkactie op geselecteerde bestanden</h2><form method="post" action="'.esc_url(admin_url('admin-post.php')).'" id="rex-bulk-files-form">';wp_nonce_field('rex_workflow_admin');echo '<input type="hidden" name="action" value="rex_bulk_files"><input type="hidden" name="ids" id="rex-bulk-ids"><select name="bulk_action" required><option value="">Kies een actie</option><option value="category">Categorieën vervangen</option><option value="roles">Toegangsrollen vervangen</option><option value="schedule">Publicatieplanning vervangen</option><option value="trash">Naar prullenbak</option></select><h3>Categorieën voor verplaatsen</h3>';
         foreach($this->core->category_tree() as $row){echo '<label style="display:block"><input type="checkbox" name="categories[]" value="'.(int)$row['term']->term_id.'"> '.esc_html(str_repeat('— ',$row['depth']).$row['term']->name).'</label>';}
-        echo '<h3>Rollen voor toegangsaanpassing</h3>';foreach(array_merge(['*'=>'Alle ingelogde gebruikers'],wp_roles()->get_names()) as $key=>$label){echo '<label style="display:block"><input type="checkbox" name="roles[]" value="'.esc_attr($key).'"> '.esc_html(translate_user_role($label)).'</label>';}
+        echo '<h3>Rollen voor toegangsaanpassing</h3>';foreach(array_merge(['*'=>'Alle ingelogde gebruikers','@guest'=>'Gasten (openbaar, ook voor ingelogde gebruikers)'],wp_roles()->get_names()) as $key=>$label){echo '<label style="display:block"><input type="checkbox" name="roles[]" value="'.esc_attr($key).'"> '.esc_html(translate_user_role($label)).'</label>';}
         echo '<h3>Publicatieplanning</h3><label>Vanaf <input type="datetime-local" name="publish_at"></label> <label>Tot <input type="datetime-local" name="expire_at"></label><p>De gekozen actie vervangt alleen dat onderdeel. Geen categorieën: categorieën verwijderen. Geen rollen: alleen beheerders.</p>';submit_button('Bulkactie uitvoeren');echo '<p id="rex-bulk-status" role="status"></p></form></div>';
     }
     public function file_order() {

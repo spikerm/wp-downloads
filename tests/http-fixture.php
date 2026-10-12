@@ -25,8 +25,8 @@ function add_filter(...$args){}function add_shortcode(...$args){}
 function plugin_basename($file){return 'rex-downloads/rex-downloads.php';}
 function is_user_logged_in(){return ($_GET['auth']??'admin')!=='none';}
 function current_user_can($cap,...$args){$auth=$_GET['auth']??'admin';return $auth==='admin'||($cap==='read'&&$auth==='tech');}
-function wp_get_current_user(){return (object)['ID'=>1,'display_name'=>'Test user','roles'=>[($_GET['auth']??'admin')==='tech'?'rex_tech':'subscriber']];}
-function get_current_user_id(){return 1;}
+function wp_get_current_user(){return (object)['ID'=>is_user_logged_in()?1:0,'display_name'=>'Test user','roles'=>[($_GET['auth']??'admin')==='tech'?'rex_tech':'subscriber']];}
+function get_current_user_id(){return is_user_logged_in()?1:0;}
 function wp_die($message,$title='',$args=[]){http_response_code($args['response']??400);echo $message;exit;}
 function auth_redirect(){http_response_code(401);exit;}
 function check_admin_referer($action){if(($_REQUEST['_wpnonce']??'')!=='valid'){wp_die('Invalid nonce','',['response'=>403]);}}
@@ -64,6 +64,7 @@ function get_terms($args){return array_values(array_map(function($term){return (
 function get_term($id,$taxonomy){return isset($GLOBALS['state']['terms'][$id])?(object)$GLOBALS['state']['terms'][$id]:null;}
 function get_term_meta($id,$key,$single){return $GLOBALS['state']['termmeta'][$id][$key]??'';}function update_term_meta($id,$key,$value){$GLOBALS['state']['termmeta'][$id][$key]=$value;}
 function term_exists($value,$taxonomy,$parent=0){foreach($GLOBALS['state']['terms'] as $term){if((is_int($value)&&$term['term_id']===$value)||($term['name']===$value&&$term['parent']===$parent)){return ['term_id'=>$term['term_id']];}}return null;}
+function wp_update_term($id,$taxonomy,$args){$GLOBALS['state']['terms'][$id]=array_merge($GLOBALS['state']['terms'][$id],$args);return ['term_id'=>$id];}
 function wp_insert_term($name,$taxonomy,$args){$id=max(array_keys($GLOBALS['state']['terms'])?:[0])+1;$GLOBALS['state']['terms'][$id]=['term_id'=>$id,'name'=>$name,'parent'=>$args['parent']??0,'count'=>0];return ['term_id'=>$id];}
 function wp_set_object_terms($id,$terms,$taxonomy){$GLOBALS['state']['relations'][$id]=$terms;return $terms;}
 function wp_get_object_terms($id,$taxonomy,$args){return $GLOBALS['state']['relations'][$id]??[];}
@@ -78,7 +79,7 @@ function wp_json_encode($v,$flags=0){return json_encode($v,$flags);}function wp_
 function admin_url($path){return '/'.$path;}function wp_safe_redirect($url){header('Location: '.$url);return true;}function nocache_headers(){header('Cache-Control: no-store');}
 function wp_send_json_error($data,$status=400){http_response_code($status);header('Content-Type: application/json');echo json_encode(['success'=>false,'data'=>$data]);exit;}
 function wp_send_json_success($data){header('Content-Type: application/json');echo json_encode(['success'=>true,'data'=>$data]);exit;}
-class FakeDatabase{public $prefix='wp_';public function get_results($query){return [];}
+class FakeDatabase{public $prefix='wp_';public function prepare($query,...$args){return $query;}public function query($query){return true;}public function get_results($query){return [];}
 public function insert($table,$data,$format){$GLOBALS['state']['events'][]=$data;return 1;}}
 $wpdb=new FakeDatabase();
 require __DIR__.'/../rex-downloads/rex-downloads.php';
@@ -87,6 +88,8 @@ function submit_button($text){echo '<p><button type="submit">'.esc_html($text).'
 function wp_enqueue_script(...$args){}
 function wp_enqueue_media(){}
 function plugins_url($name,$file){return '/'.$name;}
+function wp_login_form($args){echo '<form class="login-form"></form>';}
+function wp_lostpassword_url($url){return '#password';}
 function wp_logout_url($url){return '#logout';}
 function get_permalink(){return '/downloads';}
 function add_query_arg($args,$url){return $url.'?'.http_build_query($args);}
@@ -100,4 +103,4 @@ if($action==='state'){header('Content-Type: application/json');echo json_encode(
 if(in_array($action,['request_access','watch','integrity_begin','integrity_batch'],true)){do_action('wp_ajax_rex_'.$action);exit;}
 if($action==='notify'){foreach($state['scheduled']??[] as $event){do_action($event[1],...$event[2]);}exit;}
 if($action==='favorite'){do_action('wp_ajax_rex_favorite');exit;}
-do_action('admin_post_rex_'.$action);
+do_action((!is_user_logged_in()&&in_array($action,['download','preview'],true)?'admin_post_nopriv_rex_':'admin_post_rex_').$action);

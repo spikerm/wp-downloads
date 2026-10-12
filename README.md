@@ -73,3 +73,10 @@ CI controleert PHP en JavaScript, updater, categoriehiërarchie en volgorde, toe
 - **PDF-venster**: beveiligd voorbeeld op dezelfde pagina, inclusief downloadknop.
 
 Oude versies worden vanaf installatie van 3.0.0 bij vervanging bewaard. Zorg voor voldoende privéopslag. E-mail gebruikt `wp_mail` en WP-Cron: configureer betrouwbare mailbezorging en een echte cronjob voor tijdige meldingen. Toegang op begin-/einddatums wordt direct gecontroleerd, onafhankelijk van cron. Export bevat ook oude bestandskopieën en planning; persoonlijke abonnementen, aanvragen, verleende individuele toegang en prullenbak blijven op de oorspronkelijke site.
+
+## Gasttoegang (3.1.0)
+1. Zet onder **Downloads → Vormgeving & instellingen** de optie **Downloads voor gasten toestaan** aan.
+2. Vink bij een download de toegangskeuze **Gasten (openbaar, ook voor ingelogde gebruikers)** aan en sla op. Dit kan ook voor meerdere bestanden via bulkbeheer.
+3. Voor een openbare categorie: kies bij de categorie **Eigen rollen**, vink **Gasten** aan en laat de betreffende bestanden **Rollen van de categorie overnemen** gebruiken. Subcategorieën kunnen deze instelling overnemen.
+
+Gasten krijgen zoeken, filters, downloads en PDF-voorbeelden. Favorieten, volgen en toegangsaanvragen vereisen een account. De gastinstelling staat standaard uit; bestaande bestanden worden niet automatisch openbaar. ‘Alle ingelogde gebruikers’ geldt uitsluitend voor ingelogde gebruikers. Publicatiegrenzen en de prullenbak blijven van toepassing op openbare bestanden. Schakel gasttoegang uit om alle anonieme toegang direct te stoppen.

@@ -150,8 +150,41 @@ with tempfile.TemporaryDirectory(prefix='rex-http-') as fixture:
             assert request('trash_action',fields={'_wpnonce':'valid','id':1,'operation':'purge'})[0]==302
             assert not Path(fixture,'A','private',key).exists()
             assert not Path(fixture,'A','private',state['meta']['1']['_rex_file_versions'][0]['key']).exists()
-            print('HTTP access, versions, archive export, scheduling, grants, subscriptions, integrity and trash passed.')
+            # Guest access is opt-in globally and per file/category, through real nopriv routes.
+            assert request('save',fields={'_wpnonce':'valid','title':'Public PDF','media_id':101,'roles[]':['@guest']})[0]==302
+            state=json.loads(request('state')[1]); public_id=next(p['ID'] for p in state['posts'].values() if p['post_title']=='Public PDF')
+            assert state['meta'][str(public_id)]['_rex_roles']==['@guest']
+            assert request('download',auth='none',id=public_id,_wpnonce='valid')[0]==403
+            assert b'Public PDF' not in request('frontend',auth='none')[1]
+            assert request('save_settings',auth='user',fields={'_wpnonce':'valid','guest_access':1})[0]==403
+            assert request('save_settings',fields={'_wpnonce':'bad','guest_access':1})[0]==403
+            assert request('save_settings',fields={'_wpnonce':'valid','guest_access':1})[0]==302
+            html=request('frontend',auth='none')[1]
+            assert b'Public PDF' in html and b'rex-toolbar' in html and b'rex-pdf-dialog' in html
+            assert b'class="rex-favorite"' not in html and b'class="rex-watch"' not in html and b'class="rex-request"' not in html
+            assert b'firmware.zip' not in html
+            for post in state['posts'].values():
+                if post['post_type']=='rex_download' and post['ID']!=public_id:assert f'class="rex-file-group" data-id="{post["ID"]}"'.encode() not in html
+            assert request('download',auth='none',id=public_id,_wpnonce='valid')[1]==pdf
+            assert request('preview',auth='none',id=public_id,_wpnonce='valid')[1]==pdf
+            assert request('download',auth='none',id=public_id,_wpnonce='bad')[0]==403
+            assert request('preview',auth='none',id=public_id,_wpnonce='bad')[0]==403
+            assert request('favorite',auth='none',fields={'nonce':'valid','id':public_id,'active':1})[0]==401
+            assert request('watch',auth='none',fields={'nonce':'valid','id':public_id,'kind':'file','active':1})[0]==403
+            private_id=next(p['ID'] for p in state['posts'].values() if p['post_type']=='rex_download' and p['post_title']=='manual.pdf')
+            assert request('download',auth='none',id=private_id,_wpnonce='valid')[0]==403
+            assert request('category',fields={'_wpnonce':'valid','category_id':1,'category_name':'Manuals','category_parent':0,'category_access_mode':'custom','category_roles[]':['@guest']})[0]==302
+            assert request('download',auth='none',id=private_id,_wpnonce='valid')[0]==200
+            assert request('category',fields={'_wpnonce':'valid','category_id':1,'category_name':'Manuals','category_parent':0,'category_access_mode':'custom','category_roles[]':['*']})[0]==302
+            assert request('download',auth='none',id=private_id,_wpnonce='valid')[0]==403
+            assert request('bulk_files',fields={'_wpnonce':'valid','ids':json.dumps([public_id]),'bulk_action':'schedule','publish_at':'2030-01-01T00:00'})[0]==302
+            assert request('download',auth='none',id=public_id,_wpnonce='valid')[0]==403
+            assert request('bulk_files',fields={'_wpnonce':'valid','ids':json.dumps([public_id]),'bulk_action':'schedule'})[0]==302
+            assert request('save_settings',fields={'_wpnonce':'valid'})[0]==302
+            assert request('download',auth='none',id=public_id,_wpnonce='valid')[0]==403
+            assert request('download',auth='user',id=public_id,_wpnonce='valid')[0]==200
+            print('HTTP access, versions, archive export, scheduling, grants, subscriptions, integrity, trash and guest access passed.')
         except Exception:
-            log.seek(0);print(log.read().decode(errors='replace'));raise
+            log.seek(0);print(log.read().decode(errors='replace')[-1500:]);raise
         finally:
             server.terminate();server.wait(timeout=5)

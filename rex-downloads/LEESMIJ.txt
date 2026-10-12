@@ -96,3 +96,8 @@ Toegangsaanvragen worden door beheerders behandeld. Goedkeuring geeft toegang to
 Gebruikers volgen bestanden/categorieën vrijwillig en beheren dit via Mijn abonnementen. Meldingen gebruiken wp_mail en WP-Cron; bezorging en timing hangen af van de mail- en cronconfiguratie. Elke melding controleert opnieuw de toegang.
 Bestandscontrole controleert huidige en oude kopieën. Een eerste checksum voor een bestaand bestand is een referentie, geen bewijs dat eerdere schade ontbreekt.
 Export/import bevat ook oude kopieën en publicatieplanning. Persoonlijke abonnementen, toegangsaanvragen en individuele goedkeuringen worden niet meegenomen; evenmin prullenbak, accounts, favorieten of logs.
+
+Versie 3.1.0 — gasttoegang
+Onder Vormgeving & instellingen: Downloads voor gasten toestaan inschakelen (standaard uit).
+Selecteer daarna Gasten (openbaar, ook voor ingelogde gebruikers) bij een bestand, in bulkbeheer of bij categorierollen. Categorietoegang geldt alleen voor bestanden die rollen van de categorie overnemen.
+Gasten kunnen openbare downloads zien, zoeken, downloaden en PDF's bekijken zonder account. Alle ingelogde gebruikers blijft een afzonderlijke keuze die geen anonieme toegang verleent. Bestaande bestanden blijven afgeschermd totdat u Gasten kiest. Planning en prullenbak blijven toegang beperken. Persoonlijke functies vereisen inloggen.

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Dares Downloads
  * Description: Beveiligde downloadbibliotheek met rollen, categorieën, zoeken, favorieten, versies en statistieken. Shortcode: [rex_downloads].
- * Version: 3.0.0
+ * Version: 3.1.0
  * Plugin URI: https://github.com/spikerm/wp-downloads
  * Update URI: https://github.com/spikerm/wp-downloads
  * Author: Rex Markesteijn
@@ -18,7 +18,7 @@ final class Rex_Downloads {
         add_action('admin_post_rex_order_category',[$this,'order_category']);
         add_action('admin_post_rex_delete_category',[$this,'delete_category']);
         add_action('admin_enqueue_scripts',function(){
-            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'3.0.0',true); }
+            if (isset($_GET['page']) && in_array(sanitize_key($_GET['page']), ['rex-downloads','rex-download-all','rex-download-new'],true)) { wp_enqueue_media(); wp_enqueue_script('rex-download-media',plugins_url('media-selector.js',__FILE__),['jquery','media-editor'],'3.1.0',true); }
         });
         add_action('admin_post_rex_create_role',[$this,'create_role']);
         add_action('show_user_profile',[$this,'user_roles']);
@@ -28,7 +28,7 @@ final class Rex_Downloads {
         add_action('admin_post_rex_save',[$this,'save']);
         add_action('admin_post_rex_delete',[$this,'delete']);
         add_action('admin_post_rex_download',[$this,'download']);
-        add_action('admin_post_nopriv_rex_download',function(){ auth_redirect(); exit; });
+        add_action('admin_post_nopriv_rex_download',[$this,'download']);
         add_shortcode('rex_downloads',[$this,'shortcode']);
         add_action('template_redirect',function(){
             if (is_singular() && has_shortcode((string)get_post_field('post_content',get_queried_object_id()),'rex_downloads')) {
@@ -249,12 +249,13 @@ final class Rex_Downloads {
         return $real;
     }
     public function allowed($id) {
-        if (!is_user_logged_in() || !Rex_Downloads_Workflow::available($id)) { return false; }
+        if (!Rex_Downloads_Workflow::available($id)) { return false; }
+        if (!is_user_logged_in()) { return Rex_Downloads_Features::guest_access($id); }
         if (current_user_can('manage_options')) { return true; }
         if (in_array((int)$id,Rex_Downloads_Workflow::grants(get_current_user_id()),true)) { return true; }
         if (get_post_meta($id,'_rex_access_mode',true) === 'inherit') { return Rex_Downloads_Features::category_access($id); }
         $roles = (array)get_post_meta($id,'_rex_roles',true);
-        return in_array('*',$roles,true) || (bool)array_intersect($roles,wp_get_current_user()->roles);
+        return in_array('@guest',$roles,true) || in_array('*',$roles,true) || (bool)array_intersect($roles,wp_get_current_user()->roles);
     }
     private function guard() {
         if (!current_user_can('manage_options')) { wp_die('Geen toegang.', '', ['response'=>403]); }
@@ -275,8 +276,7 @@ final class Rex_Downloads {
         if ($id && get_post_type($id) !== 'rex_download') { wp_die('Ongeldig bestand.'); }
         $title = isset($_POST['title']) ? sanitize_text_field(wp_unslash($_POST['title'])) : '';
         if (!$title) { wp_die('Vul een titel in.'); }
-        $roles = isset($_POST['roles']) ? array_map(function($r){ return $r === '*' ? '*' : sanitize_key($r); },(array)wp_unslash($_POST['roles'])) : [];
-        $roles = array_values(array_intersect($roles,array_merge(['*'],array_keys(wp_roles()->roles))));
+        $roles = Rex_Downloads_Features::roles(wp_unslash($_POST['roles'] ?? []));
         $dir = $this->storage();
         if (is_wp_error($dir)) { wp_die(esc_html($dir->get_error_message())); }
         $new = null;
@@ -364,7 +364,7 @@ final class Rex_Downloads {
             echo '<label style="display:block;margin:8px 0;padding-left:'.(int)($row['depth']*22).'px"><input type="checkbox" name="categories[]" value="'.(int)$category->term_id.'" '.checked(in_array($category->term_id,$assigned),true,false).'> '.($row['depth'] ? '↳ ' : '').esc_html($category->name).'</label>';
         }
         echo '<p><a href="'.esc_url(admin_url('admin.php?page=rex-download-categories')).'">Categorie toevoegen</a></p></td></tr><tr><th>Toegang</th><td>';
-        foreach (array_merge(['*'=>'Alle ingelogde gebruikers'],wp_roles()->get_names()) as $key=>$label) {
+        foreach (array_merge(['*'=>'Alle ingelogde gebruikers','@guest'=>'Gasten (openbaar, ook voor ingelogde gebruikers)'],wp_roles()->get_names()) as $key=>$label) {
             echo '<label style="display:block;margin:8px 0"><input type="checkbox" name="roles[]" value="'.esc_attr($key).'" '.checked(in_array($key,$selected,true),true,false).'> '.esc_html(translate_user_role($label)).'</label>';
         }
         do_action('rex_download_extra_fields',$edit);
@@ -376,7 +376,7 @@ final class Rex_Downloads {
         if ($page === 'rex-download-new') { $query['post__in'] = [0]; }
         foreach (get_posts($query) as $item) {
             $roles = (array)get_post_meta($item->ID,'_rex_roles',true);
-            $labels = get_post_meta($item->ID,'_rex_access_mode',true)==='inherit' ? ['Rollen van de categorie'] : array_map(function($r){ return $r === '*' ? 'Alle ingelogde gebruikers' : translate_user_role(wp_roles()->get_names()[$r] ?? $r); },$roles);
+            $labels = get_post_meta($item->ID,'_rex_access_mode',true)==='inherit' ? ['Rollen van de categorie'] : array_map(function($r){ return $r === '@guest' ? 'Gasten (openbaar)' : ($r === '*' ? 'Alle ingelogde gebruikers' : translate_user_role(wp_roles()->get_names()[$r] ?? $r)); },$roles);
             echo '<tr><td>'.esc_html($item->post_title).'</td><td>'.esc_html(get_post_meta($item->ID,'_rex_name',true)).'</td><td>'.esc_html(implode(', ',$labels) ?: 'Alleen beheerders').'</td><td><a href="'.esc_url(admin_url('admin.php?page=rex-downloads&edit='.$item->ID)).'">Bewerken</a><form style="display:inline;margin-left:15px" method="post" action="'.esc_url(admin_url('admin-post.php')).'" onsubmit="return confirm(\'Bestand naar de prullenbak verplaatsen?\')">';
             wp_nonce_field('rex_manage'); echo '<input type="hidden" name="action" value="rex_delete"><input type="hidden" name="id" value="'.$item->ID.'"><button class="button-link-delete">Verwijderen</button></form></td></tr>';
         }
@@ -384,19 +384,23 @@ final class Rex_Downloads {
     }
     public function shortcode() {
         ob_start();
-        wp_enqueue_script('rex-download-frontend',plugins_url('frontend.js',__FILE__),[], '3.0.0',true);
+        wp_enqueue_script('rex-download-frontend',plugins_url('frontend.js',__FILE__),[], '3.1.0',true);
         $settings = Rex_Downloads_Features::settings();
         echo '<section data-workflow-nonce="'.esc_attr(wp_create_nonce('rex_workflow')).'" data-ajax-url="'.esc_url(admin_url('admin-ajax.php')).'" data-favorite-nonce="'.esc_attr(wp_create_nonce('rex_favorite')).'" class="rex-downloads rex-density-'.esc_attr($settings['density']).'" style="--rex-accent:'.esc_attr($settings['accent']).'">'.Rex_Downloads_Frontend::styles().Rex_Downloads_Features::styles().Rex_Downloads_Workflow::styles().'<h2>Downloads</h2>';
         if (!is_user_logged_in()) {
-            echo '<p>Log in met je WordPress-account om je bestanden te bekijken.</p>';
+            echo '<p>'.($settings['guest_access']?'Je bekijkt de openbare downloads als gast. Log in voor downloads van jouw groepen en persoonlijke functies.':'Log in met je WordPress-account om je bestanden te bekijken.').'</p>';
+            if($settings['guest_access']){echo '<details><summary>Inloggen voor extra downloads</summary>';}
             wp_login_form(['redirect'=>get_permalink(),'label_username'=>'Gebruikersnaam of e-mailadres','label_password'=>'Wachtwoord','label_remember'=>'Ingelogd blijven','label_log_in'=>'Inloggen','id_username'=>'rex-user','id_password'=>'rex-pass','id_remember'=>'rex-remember','id_submit'=>'rex-submit']);
             echo '<a href="'.esc_url(wp_lostpassword_url(get_permalink())).'">Wachtwoord vergeten?</a>';
+            if($settings['guest_access']){echo '</details>';}
         } else {
             echo '<p class="rex-account">Ingelogd als '.esc_html(wp_get_current_user()->display_name).' · <a href="'.esc_url(wp_logout_url(get_permalink())).'">Uitloggen</a></p>';
+        }
+        if (is_user_logged_in() || $settings['guest_access']) {
             Rex_Downloads_Features::toolbar($this->category_tree());do_action('rex_download_subscriptions');
             Rex_Downloads_Frontend::files($this->category_tree(), Rex_Downloads_Workflow::ordered_files(get_posts(['post_type'=>'rex_download','post_status'=>'publish','numberposts'=>-1,'orderby'=>'title','order'=>'ASC'])), function($id){ return $this->allowed($id); });
         }
-        if(is_user_logged_in()){echo Rex_Downloads_Workflow::pdf_dialog();}
+        if(is_user_logged_in() || $settings['guest_access']){echo Rex_Downloads_Workflow::pdf_dialog();}
         echo '</section>'; return ob_get_clean();
     }
 }
@@ -409,4 +413,4 @@ new Rex_Downloads_Workflow($rex_downloads_core);
 add_action('deactivate_'.plugin_basename(__FILE__),function(){wp_clear_scheduled_hook('rex_download_prune');wp_clear_scheduled_hook('rex_download_notify');});
 
 require_once __DIR__.'/github-updater.php';
-new Rex_Downloads_GitHub_Updater(__FILE__, '3.0.0');
+new Rex_Downloads_GitHub_Updater(__FILE__, '3.1.0');

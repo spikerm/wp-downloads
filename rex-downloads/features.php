@@ -12,7 +12,7 @@ final class Rex_Downloads_Features {
         add_action('admin_post_rex_save_settings',[$this,'save_settings']);
         add_action('admin_post_rex_sort_categories',[$this,'sort_categories']);
         add_action('admin_post_rex_preview',[$this,'preview']);
-        add_action('admin_post_nopriv_rex_preview',function(){auth_redirect();exit;});
+        add_action('admin_post_nopriv_rex_preview',[$this,'preview']);
         add_action('wp_ajax_rex_favorite',[$this,'favorite']);
         add_action('rex_download_extra_fields',[$this,'download_fields']);
         add_action('rex_download_saved',[$this,'saved'],10,3);
@@ -25,7 +25,7 @@ final class Rex_Downloads_Features {
     }
     public static function settings() {
         $value = get_option('rex_download_settings',[]);
-        return array_merge(['accent'=>'#17639e','density'=>'normal','collapsed'=>0,'badge_days'=>14,'log_users'=>1,'retention'=>90],is_array($value)?$value:[]);
+        return array_merge(['accent'=>'#17639e','density'=>'normal','collapsed'=>0,'badge_days'=>14,'log_users'=>1,'retention'=>90,'guest_access'=>0],is_array($value)?$value:[]);
     }
     private function guard($nonce) {
         if (!current_user_can('manage_options')) { wp_die('Geen toegang.','',['response'=>403]); }
@@ -52,7 +52,7 @@ final class Rex_Downloads_Features {
     }
     public function assets() {
         if (($_GET['page'] ?? '') === 'rex-download-categories') {
-            wp_enqueue_script('rex-category-sort',plugins_url('category-sort.js',__FILE__),['jquery','jquery-ui-sortable'],'3.0.0',true);
+            wp_enqueue_script('rex-category-sort',plugins_url('category-sort.js',__FILE__),['jquery','jquery-ui-sortable'],'3.1.0',true);
         }
     }
     public function sort_fields() {
@@ -76,10 +76,10 @@ final class Rex_Downloads_Features {
     }
     public static function roles($input) {
         $input=is_array($input)?$input:[];
-        return array_values(array_unique(array_intersect(array_map(function($role){return $role==='*'?'*':(is_string($role)?sanitize_key($role):'');},$input),array_merge(['*'],array_keys(wp_roles()->roles)))));
+        return array_values(array_unique(array_intersect(array_map(function($role){return in_array($role,['*','@guest'],true)?$role:(is_string($role)?sanitize_key($role):'');},$input),array_merge(['*','@guest'],array_keys(wp_roles()->roles)))));
     }
     private static function role_boxes($name,$selected) {
-        foreach(array_merge(['*'=>'Alle ingelogde gebruikers'],wp_roles()->get_names()) as $key=>$label){
+        foreach(array_merge(['*'=>'Alle ingelogde gebruikers','@guest'=>'Gasten (openbaar, ook voor ingelogde gebruikers)'],wp_roles()->get_names()) as $key=>$label){
             echo '<label style="display:block;margin:6px 0"><input type="checkbox" name="'.esc_attr($name).'[]" value="'.esc_attr($key).'" '.checked(in_array($key,$selected,true),true,false).'> '.esc_html(translate_user_role($label)).'</label>';
         }
     }
@@ -110,8 +110,13 @@ final class Rex_Downloads_Features {
         $terms=wp_get_object_terms($id,'rex_download_category',['fields'=>'ids']);
         if(is_wp_error($terms)||!$terms){return false;}
         $user=$user?:wp_get_current_user();
-        foreach($terms as $term){$roles=self::effective_category_roles((int)$term);if(in_array('*',$roles,true)||array_intersect($roles,(array)$user->roles)){return true;}}
+        foreach($terms as $term){$roles=self::effective_category_roles((int)$term);if(empty($user->ID)){if(self::settings()['guest_access']&&in_array('@guest',$roles,true)){return true;}}elseif(in_array('@guest',$roles,true)||in_array('*',$roles,true)||array_intersect($roles,(array)$user->roles)){return true;}}
         return false;
+    }
+    public static function guest_access($id) {
+        if(!self::settings()['guest_access']){return false;}
+        if(get_post_meta($id,'_rex_access_mode',true)==='inherit'){$terms=wp_get_object_terms($id,'rex_download_category',['fields'=>'ids']);foreach(is_wp_error($terms)?[]:$terms as $term){if(in_array('@guest',self::effective_category_roles((int)$term),true)){return true;}}return false;}
+        return in_array('@guest',(array)get_post_meta($id,'_rex_roles',true),true);
     }
     public function download_fields($id) {
         echo '<p><label>Toegangsbron <select name="access_mode"><option value="explicit">Eigen rollen hierboven</option><option value="inherit" '.selected($id?get_post_meta($id,'_rex_access_mode',true):'','inherit',false).'>Rollen van de categorie overnemen</option></select></label></p><p>Bij meerdere categorieën is toegang via één categorie voldoende. Zonder categorie: alleen beheerders bij overnemen.</p></td></tr><tr><th>Versie & wijzigingen</th><td>';
@@ -197,7 +202,7 @@ final class Rex_Downloads_Features {
         echo '</tbody></table><p>';if($page>1){echo '<a class="button" href="'.esc_url(admin_url('admin.php?page=rex-download-log&paged='.($page-1))).'">Vorige</a> ';}if(count($rows)>50){echo '<a class="button" href="'.esc_url(admin_url('admin.php?page=rex-download-log&paged='.($page+1))).'">Volgende</a>';}echo '</p></div>';
     }
     public function settings_page() {
-        if(!current_user_can('manage_options')){return;}$s=self::settings();echo '<div class="wrap"><h1>Vormgeving & instellingen</h1><form method="post" action="'.esc_url(admin_url('admin-post.php')).'">';wp_nonce_field('rex_settings');echo '<input type="hidden" name="action" value="rex_save_settings"><table class="form-table"><tr><th>Accentkleur</th><td><input type="color" name="accent" value="'.esc_attr($s['accent']).'"></td></tr><tr><th>Weergave</th><td><select name="density">';foreach(['compact'=>'Compact','normal'=>'Normaal','spacious'=>'Ruim'] as $value=>$label){echo '<option value="'.esc_attr($value).'" '.selected($s['density'],$value,false).'>'.esc_html($label).'</option>';}echo '</select></td></tr><tr><th>Mappen</th><td><label><input type="checkbox" name="collapsed" value="1" '.checked($s['collapsed'],1,false).'> Standaard ingeklapt</label></td></tr><tr><th>Nieuw / bijgewerkt</th><td><input type="number" name="badge_days" min="1" max="365" value="'.(int)$s['badge_days'].'"> dagen zichtbaar</td></tr><tr><th>Logboek</th><td><label><input type="checkbox" name="log_users" value="1" '.checked($s['log_users'],1,false).'> Gebruiker vastleggen bij downloads en PDF-voorbeelden</label><p>Uitgeschakeld: nieuwe gebeurtenissen worden zonder gebruikerskoppeling geregistreerd.</p><label>Bewaren <input type="number" name="retention" min="1" max="3650" value="'.(int)$s['retention'].'"> dagen</label></td></tr></table>';submit_button('Instellingen opslaan');echo '</form></div>';
+        if(!current_user_can('manage_options')){return;}$s=self::settings();echo '<div class="wrap"><h1>Vormgeving & instellingen</h1><form method="post" action="'.esc_url(admin_url('admin-post.php')).'">';wp_nonce_field('rex_settings');echo '<input type="hidden" name="action" value="rex_save_settings"><table class="form-table"><tr><th>Gasttoegang</th><td><label><input type="checkbox" name="guest_access" value="1" '.checked($s['guest_access'],1,false).'> Downloads voor gasten toestaan</label><p>Gasten zien en downloaden uitsluitend bestanden met toegang ‘Gasten’, via eigen rollen of categorietoegang. Bestaande afgeschermde bestanden blijven afgeschermd. Favorieten, abonnementen en aanvragen vereisen inloggen.</p></td></tr><tr><th>Accentkleur</th><td><input type="color" name="accent" value="'.esc_attr($s['accent']).'"></td></tr><tr><th>Weergave</th><td><select name="density">';foreach(['compact'=>'Compact','normal'=>'Normaal','spacious'=>'Ruim'] as $value=>$label){echo '<option value="'.esc_attr($value).'" '.selected($s['density'],$value,false).'>'.esc_html($label).'</option>';}echo '</select></td></tr><tr><th>Mappen</th><td><label><input type="checkbox" name="collapsed" value="1" '.checked($s['collapsed'],1,false).'> Standaard ingeklapt</label></td></tr><tr><th>Nieuw / bijgewerkt</th><td><input type="number" name="badge_days" min="1" max="365" value="'.(int)$s['badge_days'].'"> dagen zichtbaar</td></tr><tr><th>Logboek</th><td><label><input type="checkbox" name="log_users" value="1" '.checked($s['log_users'],1,false).'> Gebruiker vastleggen bij downloads en PDF-voorbeelden</label><p>Uitgeschakeld: nieuwe gebeurtenissen worden zonder gebruikerskoppeling geregistreerd.</p><label>Bewaren <input type="number" name="retention" min="1" max="3650" value="'.(int)$s['retention'].'"> dagen</label></td></tr></table>';submit_button('Instellingen opslaan');echo '</form></div>';
     }
     public function settings_admin(){ $this->settings_page(); }
     public function save_settings() {
@@ -206,12 +211,12 @@ final class Rex_Downloads_Features {
         wp_safe_redirect(admin_url('admin.php?page=rex-download-settings'));exit;
     }
     public static function clean_settings($input) {
-        return ['accent'=>sanitize_hex_color($input['accent']??'')?:'#17639e','density'=>in_array($input['density']??'',['compact','normal','spacious'],true)?$input['density']:'normal','collapsed'=>empty($input['collapsed'])?0:1,'badge_days'=>max(1,min(365,absint($input['badge_days']??14))),'log_users'=>empty($input['log_users'])?0:1,'retention'=>max(1,min(3650,absint($input['retention']??90)))];
+        return ['guest_access'=>empty($input['guest_access'])?0:1,'accent'=>sanitize_hex_color($input['accent']??'')?:'#17639e','density'=>in_array($input['density']??'',['compact','normal','spacious'],true)?$input['density']:'normal','collapsed'=>empty($input['collapsed'])?0:1,'badge_days'=>max(1,min(365,absint($input['badge_days']??14))),'log_users'=>empty($input['log_users'])?0:1,'retention'=>max(1,min(3650,absint($input['retention']??90)))];
     }
     public static function toolbar($rows) {
         echo '<div class="rex-toolbar"><label>Zoeken<input class="rex-search" type="search" placeholder="Naam of beschrijving…"></label><label>Categorie<select class="rex-filter-category"><option value="">Alle categorieën</option>';
         foreach($rows as $row){echo '<option value="'.(int)$row['term']->term_id.'">'.esc_html(str_repeat('— ',$row['depth']).$row['term']->name).'</option>';}
-        echo '</select></label><label>Bestandstype<select class="rex-filter-type"><option value="">Alle typen</option></select></label><label class="rex-favorites-filter"><input class="rex-filter-favorites" type="checkbox"> Alleen favorieten</label><button class="rex-expand" type="button">Alles uitklappen</button><button class="rex-collapse" type="button">Alles inklappen</button></div><p class="rex-filter-status" role="status" aria-live="polite"></p>';
+        echo '</select></label><label>Bestandstype<select class="rex-filter-type"><option value="">Alle typen</option></select></label><label class="rex-favorites-filter" '.(is_user_logged_in()?'':'hidden').'><input class="rex-filter-favorites" type="checkbox"> Alleen favorieten</label><button class="rex-expand" type="button">Alles uitklappen</button><button class="rex-collapse" type="button">Alles inklappen</button></div><p class="rex-filter-status" role="status" aria-live="polite"></p>';
     }
     public static function styles() {
         return '<style>.rex-downloads h2{border-color:var(--rex-accent)}.rex-downloads a,.rex-downloads summary::marker,.rex-downloads .rex-folder-icon{color:var(--rex-accent)}.rex-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:12px}.rex-toolbar label{font-size:12px;display:flex;flex-direction:column;gap:4px}.rex-toolbar input[type=search],.rex-toolbar select{padding:8px;border:1px solid #ccd5df;background:#fff;color:#163b60;max-width:100%;border-radius:4px}.rex-toolbar .rex-favorites-filter{flex-direction:row;align-items:center;padding:8px}.rex-downloads button{cursor:pointer;border:1px solid #c9d4df;background:#f4f7fa;color:var(--rex-accent);padding:6px 9px;border-radius:4px;font:inherit}.rex-downloads button:focus-visible{outline:3px solid var(--rex-accent)}.rex-file-group{margin:7px 0}.rex-file-group .rex-file{margin:0}.rex-file-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:5px 8px;font-size:12px}.rex-badge{font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;background:#e3f5e9;color:#236b3d}.rex-badge-updated{background:#e3efff;color:#225b91}.rex-version{font-size:11px;color:#677a8b}.rex-favorite[aria-pressed=true]{color:#9b6900;background:#fff7dc}.rex-downloads [hidden]{display:none!important}.rex-changelog{font-size:12px;padding:8px;border:1px solid #d7e1eb;border-radius:4px;white-space:pre-line}.rex-filter-status{font-size:12px;color:#617488}.rex-density-compact .rex-file{padding:5px 7px}.rex-density-compact .rex-folder summary{padding:6px 8px}.rex-density-spacious .rex-file{padding:15px}.rex-density-spacious .rex-folder summary{padding:15px}@media(max-width:600px){.rex-toolbar label{max-width:100%}.rex-toolbar .rex-search{width:100%}}</style>';

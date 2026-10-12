@@ -29,7 +29,7 @@ final class Rex_Downloads_Migration {
         $path=$dir.'/export-'.bin2hex(random_bytes(12)).'.zip';
         register_shutdown_function(function()use($path){if(is_file($path)){@unlink($path);}});
         $zip=new ZipArchive();if($zip->open($path,ZipArchive::CREATE|ZipArchive::EXCL)!==true){wp_die('Export kan niet worden gemaakt.');}
-        $manifest=['format'=>'wp-dares-downloads','schema'=>1,'plugin_version'=>'3.0.0','categories'=>[],'downloads'=>[],'settings'=>Rex_Downloads_Features::settings(),'roles'=>get_option('rex_download_custom_roles',[])];
+        $manifest=['format'=>'wp-dares-downloads','schema'=>1,'plugin_version'=>'3.1.0','categories'=>[],'downloads'=>[],'settings'=>Rex_Downloads_Features::settings(),'roles'=>get_option('rex_download_custom_roles',[])];
         $order=get_option('rex_download_category_order',[]);$terms=get_terms(['taxonomy'=>'rex_download_category','hide_empty'=>false]);
         if(is_wp_error($terms)){$zip->close();@unlink($path);wp_die('Categorieën niet beschikbaar.');}
         foreach($terms as $term){$manifest['categories'][]=['id'=>(int)$term->term_id,'parent'=>(int)$term->parent,'name'=>$term->name,'order'=>(int)($order[$term->term_id]??2147483647),'access_mode'=>get_term_meta($term->term_id,'_rex_access_mode',true),'roles'=>get_term_meta($term->term_id,'_rex_roles',true)];}
