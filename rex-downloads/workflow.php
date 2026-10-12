@@ -22,7 +22,7 @@ final class Rex_Downloads_Workflow {
         foreach(['dashboard'=>'Dashboard','manager'=>'Bestanden beheren','trash'=>'Prullenbak','requests'=>'Toegangsaanvragen','integrity'=>'Bestandscontrole'] as $method=>$label){add_submenu_page('rex-downloads',$label,$label,'manage_options','rex-download-'.$method,[$this,$method]);}
     }
     public function assets() {
-        if(strpos(sanitize_key($_GET['page']??''),'rex-download-')===0){wp_enqueue_script('rex-workflow-admin',plugins_url('workflow-admin.js',__FILE__),['jquery','jquery-ui-sortable'],'3.1.0',true);}
+        if(strpos(sanitize_key($_GET['page']??''),'rex-download-')===0){wp_enqueue_script('rex-workflow-admin',plugins_url('workflow-admin.js',__FILE__),['jquery','jquery-ui-sortable'],'3.1.1',true);}
     }
     private function guard($nonce='rex_workflow_admin') {if(!current_user_can('manage_options')){wp_die('Geen toegang.','',['response'=>403]);}check_admin_referer($nonce);}
     private function ajax_guard($admin=false){if(!is_user_logged_in()||($admin&&!current_user_can('manage_options'))){wp_send_json_error(['message'=>'Geen toegang.'],403);}check_ajax_referer('rex_workflow','nonce');}

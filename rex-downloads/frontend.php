@@ -49,7 +49,7 @@ final class Rex_Downloads_Frontend {
             foreach ($uncategorized as $post) { self::file_row($post); }
             echo '</div></details>';
         }
-        if (!$rows && !$uncategorized) { echo '<p class="rex-empty">Er zijn nog geen downloads beschikbaar voor jouw account.</p>'; }
+        if (!$rows && !$uncategorized) { if(is_user_logged_in()){echo '<p class="rex-empty">Er zijn nog geen downloads beschikbaar voor jouw account.</p>';} }
         echo '</div>';
     }
     private static function file_row($post) {

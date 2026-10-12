@@ -25,7 +25,7 @@ final class Rex_Downloads_Features {
     }
     public static function settings() {
         $value = get_option('rex_download_settings',[]);
-        return array_merge(['accent'=>'#17639e','density'=>'normal','collapsed'=>0,'badge_days'=>14,'log_users'=>1,'retention'=>90,'guest_access'=>0],is_array($value)?$value:[]);
+        return array_merge(['accent'=>'#17639e','density'=>'normal','collapsed'=>0,'badge_days'=>14,'log_users'=>1,'retention'=>90,'guest_access'=>1],is_array($value)?$value:[]);
     }
     private function guard($nonce) {
         if (!current_user_can('manage_options')) { wp_die('Geen toegang.','',['response'=>403]); }
@@ -52,7 +52,7 @@ final class Rex_Downloads_Features {
     }
     public function assets() {
         if (($_GET['page'] ?? '') === 'rex-download-categories') {
-            wp_enqueue_script('rex-category-sort',plugins_url('category-sort.js',__FILE__),['jquery','jquery-ui-sortable'],'3.1.0',true);
+            wp_enqueue_script('rex-category-sort',plugins_url('category-sort.js',__FILE__),['jquery','jquery-ui-sortable'],'3.1.1',true);
         }
     }
     public function sort_fields() {

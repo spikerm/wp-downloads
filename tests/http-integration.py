@@ -150,10 +150,15 @@ with tempfile.TemporaryDirectory(prefix='rex-http-') as fixture:
             assert request('trash_action',fields={'_wpnonce':'valid','id':1,'operation':'purge'})[0]==302
             assert not Path(fixture,'A','private',key).exists()
             assert not Path(fixture,'A','private',state['meta']['1']['_rex_file_versions'][0]['key']).exists()
-            # Guest access is opt-in globally and per file/category, through real nopriv routes.
+            # Selecting Gasten is sufficient unless the administrator explicitly disabled guest access.
             assert request('save',fields={'_wpnonce':'valid','title':'Public PDF','media_id':101,'roles[]':['@guest']})[0]==302
             state=json.loads(request('state')[1]); public_id=next(p['ID'] for p in state['posts'].values() if p['post_title']=='Public PDF')
             assert state['meta'][str(public_id)]['_rex_roles']==['@guest']
+            assert request('download',auth='none',id=public_id,_wpnonce='valid')[0]==200
+            automatic=request('frontend',auth='none')[1]
+            assert b'Public PDF' in automatic and b'Log in met je WordPress-account om je bestanden te bekijken.' not in automatic
+            assert automatic.index(b'rex-file-group')<automatic.index(b'login-form')
+            assert request('save_settings',fields={'_wpnonce':'valid'})[0]==302
             assert request('download',auth='none',id=public_id,_wpnonce='valid')[0]==403
             assert b'Public PDF' not in request('frontend',auth='none')[1]
             assert request('save_settings',auth='user',fields={'_wpnonce':'valid','guest_access':1})[0]==403
@@ -161,6 +166,8 @@ with tempfile.TemporaryDirectory(prefix='rex-http-') as fixture:
             assert request('save_settings',fields={'_wpnonce':'valid','guest_access':1})[0]==302
             html=request('frontend',auth='none')[1]
             assert b'Public PDF' in html and b'rex-toolbar' in html and b'rex-pdf-dialog' in html
+            assert b'Log in met je WordPress-account om je bestanden te bekijken.' not in html
+            assert html.index(b'rex-file-group')<html.index(b'login-form')
             assert b'class="rex-favorite"' not in html and b'class="rex-watch"' not in html and b'class="rex-request"' not in html
             assert b'firmware.zip' not in html
             for post in state['posts'].values():

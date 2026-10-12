@@ -101,3 +101,6 @@ Versie 3.1.0 — gasttoegang
 Onder Vormgeving & instellingen: Downloads voor gasten toestaan inschakelen (standaard uit).
 Selecteer daarna Gasten (openbaar, ook voor ingelogde gebruikers) bij een bestand, in bulkbeheer of bij categorierollen. Categorietoegang geldt alleen voor bestanden die rollen van de categorie overnemen.
 Gasten kunnen openbare downloads zien, zoeken, downloaden en PDF's bekijken zonder account. Alle ingelogde gebruikers blijft een afzonderlijke keuze die geen anonieme toegang verleent. Bestaande bestanden blijven afgeschermd totdat u Gasten kiest. Planning en prullenbak blijven toegang beperken. Persoonlijke functies vereisen inloggen.
+
+Versie 3.1.1 — gastweergave hersteld
+Zonder opgeslagen gastinstelling is de keuze Gasten voldoende. Een expliciet uitgeschakelde gastinstelling blijft gelden. Openbare downloads staan bovenaan, met alleen onderaan een optioneel inlogformulier. Een lege openbare lijst meldt dat er geen openbare downloads zijn. Wis na de update bestaande pagina-/servercache als het oude scherm blijft staan.
